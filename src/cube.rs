@@ -38,8 +38,8 @@ pub enum Move {
 
 pub struct RubikCube(Subst);
 impl RubikCube {
-    pub fn new(m: Move) -> Self {
-        RubikCube(Subst::from(m))
+    pub fn new(s: Subst) -> Self {
+        RubikCube(s)
     }
 }
 
@@ -212,14 +212,14 @@ impl Mul for Subst {
             }; 12],
         );
         for i in 0..8 {
-            res.0[i] = self.0[rhs.0[i].c as usize];
-            res.0[i].o += rhs.0[i].o;
+            res.0[i] = rhs.0[self.0[i].c as usize];
+            res.0[i].o += self.0[i].o;
             res.0[i].o %= 3;
         }
 
         for i in 0..12 {
-            res.1[i] = self.1[rhs.1[i].e as usize];
-            res.1[i].o += rhs.1[i].o;
+            res.1[i] = rhs.1[self.1[i].e as usize];
+            res.1[i].o += self.1[i].o;
             res.1[i].o %= 2;
         }
 
