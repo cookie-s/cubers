@@ -61,6 +61,7 @@ impl fmt::Debug for RubikCube {
             }
         }
 
+        // TODO: 全体的に無意味にここにハードコードしない
         use Color::*;
         const ccols: [[Color; 3]; 8] = [
             [B, Y, R],
