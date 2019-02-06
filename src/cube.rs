@@ -14,15 +14,15 @@ pub enum EdgeCubePos {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct CornerCube {
-    c: CornerCubePos,
-    o: u8, // [0, 3)
+pub struct CornerCube {
+    pub c: CornerCubePos,
+    pub o: u8, // [0, 3)
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct EdgeCube {
-    e: EdgeCubePos,
-    o: u8, // [0, 2)
+pub struct EdgeCube {
+    pub e: EdgeCubePos,
+    pub o: u8, // [0, 2)
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -36,7 +36,7 @@ pub enum Move {
     R1, R2, R3,
 }
 
-pub struct RubikCube(Subst);
+pub struct RubikCube(pub Subst);
 impl RubikCube {
     pub fn new(s: Subst) -> Self {
         RubikCube(s)
@@ -195,7 +195,7 @@ impl fmt::Debug for RubikCube {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Subst([CornerCube; 8], [EdgeCube; 12]);
+pub struct Subst(pub [CornerCube; 8], pub [EdgeCube; 12]);
 
 impl Mul for Subst {
     type Output = Self;
