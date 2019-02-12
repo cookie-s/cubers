@@ -1,6 +1,34 @@
 use std::fmt;
 use std::ops::Mul;
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
+pub const SOLVED: CubieLevel = CubieLevel(
+    [
+        CornerCube { c: CornerCubePos::URF, o: 0 },
+        CornerCube { c: CornerCubePos::UFL, o: 0 },
+        CornerCube { c: CornerCubePos::ULB, o: 0 },
+        CornerCube { c: CornerCubePos::UBR, o: 0 },
+        CornerCube { c: CornerCubePos::DFR, o: 0 },
+        CornerCube { c: CornerCubePos::DLF, o: 0 },
+        CornerCube { c: CornerCubePos::DBL, o: 0 },
+        CornerCube { c: CornerCubePos::DRB, o: 0 },
+    ],
+    [
+        EdgeCube { e: EdgeCubePos::UR, o: 0 },
+        EdgeCube { e: EdgeCubePos::UF, o: 0 },
+        EdgeCube { e: EdgeCubePos::UL, o: 0 },
+        EdgeCube { e: EdgeCubePos::UB, o: 0 },
+        EdgeCube { e: EdgeCubePos::DR, o: 0 },
+        EdgeCube { e: EdgeCubePos::DF, o: 0 },
+        EdgeCube { e: EdgeCubePos::DL, o: 0 },
+        EdgeCube { e: EdgeCubePos::DB, o: 0 },
+        EdgeCube { e: EdgeCubePos::FR, o: 0 },
+        EdgeCube { e: EdgeCubePos::FL, o: 0 },
+        EdgeCube { e: EdgeCubePos::BL, o: 0 },
+        EdgeCube { e: EdgeCubePos::BR, o: 0 },
+    ],
+);
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum CornerCubePos {
@@ -36,12 +64,10 @@ pub enum Move {
     R1, R2, R3,
 }
 
-pub struct RubikCube(pub Subst);
-impl RubikCube {
-    pub fn new(s: Subst) -> Self {
-        RubikCube(s)
-    }
-}
+#[derive(Copy, Clone)]
+pub struct CubieLevel(pub [CornerCube; 8], pub [EdgeCube; 12]);
+
+pub struct RubikCube(pub CubieLevel);
 
 impl fmt::Debug for RubikCube {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -63,7 +89,7 @@ impl fmt::Debug for RubikCube {
 
         // TODO: 全体的に無意味にここにハードコードしない
         use Color::*;
-        const ccols: [[Color; 3]; 8] = [
+        const CCOLS: [[Color; 3]; 8] = [
             [B, Y, R],
             [B, R, W],
             [B, W, O],
@@ -73,7 +99,7 @@ impl fmt::Debug for RubikCube {
             [G, O, W],
             [G, Y, O],
         ];
-        const ecols: [[Color; 2]; 12] = [
+        const ECOLS: [[Color; 2]; 12] = [
             [B, Y],
             [B, R],
             [B, W],
@@ -88,12 +114,12 @@ impl fmt::Debug for RubikCube {
             [O, Y],
         ];
         fn c(cb: &RubikCube, x: CornerCubePos, y: u8) -> Color {
-            let cb = cb.0;
-            ccols[cb.0[x as usize].c as usize][((6 - cb.0[x as usize].o + y) % 3) as usize]
+            let c = &cb.0;
+            CCOLS[c.0[x as usize].c as usize][((6 - c.0[x as usize].o + y) % 3) as usize]
         };
         fn e(cb: &RubikCube, x: EdgeCubePos, y: u8) -> Color {
-            let cb = cb.0;
-            ecols[cb.1[x as usize].e as usize][((4 - cb.1[x as usize].o + y) % 2) as usize]
+            let c = &cb.0;
+            ECOLS[c.1[x as usize].e as usize][((4 - c.1[x as usize].o + y) % 2) as usize]
         };
 
         use self::CornerCubePos::*;
@@ -195,14 +221,194 @@ impl fmt::Debug for RubikCube {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Subst(pub [CornerCube; 8], pub [EdgeCube; 12]);
+impl Mul<CubieLevel> for Move {
+    type Output = CubieLevel;
 
-impl Mul for Subst {
-    type Output = Self;
+    fn mul(self, rhs: CubieLevel) -> Self::Output {
+        fn subst(m: Move) -> CubieLevel {
+            use self::CornerCubePos::*;
+            use self::EdgeCubePos::*;
+            use self::Move::*;
+            match m {
+                U1 => CubieLevel(
+                    [
+                        CornerCube { c: UBR, o: 0 },
+                        CornerCube { c: URF, o: 0 },
+                        CornerCube { c: UFL, o: 0 },
+                        CornerCube { c: ULB, o: 0 },
+                        CornerCube { c: DFR, o: 0 },
+                        CornerCube { c: DLF, o: 0 },
+                        CornerCube { c: DBL, o: 0 },
+                        CornerCube { c: DRB, o: 0 },
+                    ],
+                    [
+                        EdgeCube { e: UB, o: 0 },
+                        EdgeCube { e: UR, o: 0 },
+                        EdgeCube { e: UF, o: 0 },
+                        EdgeCube { e: UL, o: 0 },
+                        EdgeCube { e: DR, o: 0 },
+                        EdgeCube { e: DF, o: 0 },
+                        EdgeCube { e: DL, o: 0 },
+                        EdgeCube { e: DB, o: 0 },
+                        EdgeCube { e: FR, o: 0 },
+                        EdgeCube { e: FL, o: 0 },
+                        EdgeCube { e: BL, o: 0 },
+                        EdgeCube { e: BR, o: 0 },
+                    ],
+                ),
+                U2 => U1 * subst(U1),
+                U3 => U1 * subst(U2),
 
-    fn mul(self, rhs: Self) -> Self {
-        let mut res = Subst(
+                R1 => CubieLevel(
+                    [
+                        CornerCube { c: DFR, o: 2 },
+                        CornerCube { c: UFL, o: 0 },
+                        CornerCube { c: ULB, o: 0 },
+                        CornerCube { c: URF, o: 1 },
+                        CornerCube { c: DRB, o: 1 },
+                        CornerCube { c: DLF, o: 0 },
+                        CornerCube { c: DBL, o: 0 },
+                        CornerCube { c: UBR, o: 2 },
+                    ],
+                    [
+                        EdgeCube { e: FR, o: 0 },
+                        EdgeCube { e: UF, o: 0 },
+                        EdgeCube { e: UL, o: 0 },
+                        EdgeCube { e: UB, o: 0 },
+                        EdgeCube { e: BR, o: 0 },
+                        EdgeCube { e: DF, o: 0 },
+                        EdgeCube { e: DL, o: 0 },
+                        EdgeCube { e: DB, o: 0 },
+                        EdgeCube { e: DR, o: 0 },
+                        EdgeCube { e: FL, o: 0 },
+                        EdgeCube { e: BL, o: 0 },
+                        EdgeCube { e: UR, o: 0 },
+                    ],
+                ),
+                R2 => R1 * subst(R1),
+                R3 => R1 * subst(R2),
+
+                F1 => CubieLevel(
+                    [
+                        CornerCube { c: UFL, o: 1 },
+                        CornerCube { c: DLF, o: 2 },
+                        CornerCube { c: ULB, o: 0 },
+                        CornerCube { c: UBR, o: 0 },
+                        CornerCube { c: URF, o: 2 },
+                        CornerCube { c: DFR, o: 1 },
+                        CornerCube { c: DBL, o: 0 },
+                        CornerCube { c: DRB, o: 0 },
+                    ],
+                    [
+                        EdgeCube { e: UR, o: 0 },
+                        EdgeCube { e: FL, o: 1 },
+                        EdgeCube { e: UL, o: 0 },
+                        EdgeCube { e: UB, o: 0 },
+                        EdgeCube { e: DR, o: 0 },
+                        EdgeCube { e: FR, o: 1 },
+                        EdgeCube { e: DL, o: 0 },
+                        EdgeCube { e: DB, o: 0 },
+                        EdgeCube { e: UF, o: 1 },
+                        EdgeCube { e: DF, o: 1 },
+                        EdgeCube { e: BL, o: 0 },
+                        EdgeCube { e: BR, o: 0 },
+                    ],
+                ),
+                F2 => F1 * subst(F1),
+                F3 => F1 * subst(F2),
+
+                D1 => CubieLevel(
+                    [
+                        CornerCube { c: URF, o: 0 },
+                        CornerCube { c: UFL, o: 0 },
+                        CornerCube { c: ULB, o: 0 },
+                        CornerCube { c: UBR, o: 0 },
+                        CornerCube { c: DLF, o: 0 },
+                        CornerCube { c: DBL, o: 0 },
+                        CornerCube { c: DRB, o: 0 },
+                        CornerCube { c: DFR, o: 0 },
+                    ],
+                    [
+                        EdgeCube { e: UR, o: 0 },
+                        EdgeCube { e: UF, o: 0 },
+                        EdgeCube { e: UL, o: 0 },
+                        EdgeCube { e: UB, o: 0 },
+                        EdgeCube { e: DF, o: 0 },
+                        EdgeCube { e: DL, o: 0 },
+                        EdgeCube { e: DB, o: 0 },
+                        EdgeCube { e: DR, o: 0 },
+                        EdgeCube { e: FR, o: 0 },
+                        EdgeCube { e: FL, o: 0 },
+                        EdgeCube { e: BL, o: 0 },
+                        EdgeCube { e: BR, o: 0 },
+                    ],
+                ),
+                D2 => D1 * subst(D1),
+                D3 => D1 * subst(D2),
+
+                L1 => CubieLevel(
+                    [
+                        CornerCube { c: URF, o: 0 },
+                        CornerCube { c: ULB, o: 1 },
+                        CornerCube { c: DBL, o: 2 },
+                        CornerCube { c: UBR, o: 0 },
+                        CornerCube { c: DFR, o: 0 },
+                        CornerCube { c: UFL, o: 2 },
+                        CornerCube { c: DLF, o: 1 },
+                        CornerCube { c: DRB, o: 0 },
+                    ],
+                    [
+                        EdgeCube { e: UR, o: 0 },
+                        EdgeCube { e: UF, o: 0 },
+                        EdgeCube { e: BL, o: 0 },
+                        EdgeCube { e: UB, o: 0 },
+                        EdgeCube { e: DR, o: 0 },
+                        EdgeCube { e: DF, o: 0 },
+                        EdgeCube { e: FL, o: 0 },
+                        EdgeCube { e: DB, o: 0 },
+                        EdgeCube { e: FR, o: 0 },
+                        EdgeCube { e: UL, o: 0 },
+                        EdgeCube { e: DL, o: 0 },
+                        EdgeCube { e: BR, o: 0 },
+                    ],
+                ),
+                L2 => L1 * subst(L1),
+                L3 => L1 * subst(L2),
+
+                B1 => CubieLevel(
+                    [
+                        CornerCube { c: URF, o: 0 },
+                        CornerCube { c: UFL, o: 0 },
+                        CornerCube { c: UBR, o: 1 },
+                        CornerCube { c: DRB, o: 2 },
+                        CornerCube { c: DFR, o: 0 },
+                        CornerCube { c: DLF, o: 0 },
+                        CornerCube { c: ULB, o: 2 },
+                        CornerCube { c: DBL, o: 1 },
+                    ],
+                    [
+                        EdgeCube { e: UR, o: 0 },
+                        EdgeCube { e: UF, o: 0 },
+                        EdgeCube { e: UL, o: 0 },
+                        EdgeCube { e: BR, o: 1 },
+                        EdgeCube { e: DR, o: 0 },
+                        EdgeCube { e: DF, o: 0 },
+                        EdgeCube { e: DL, o: 0 },
+                        EdgeCube { e: BL, o: 1 },
+                        EdgeCube { e: FR, o: 0 },
+                        EdgeCube { e: FL, o: 0 },
+                        EdgeCube { e: UB, o: 1 },
+                        EdgeCube { e: DB, o: 1 },
+                    ],
+                ),
+                B2 => B1 * subst(B1),
+                B3 => B1 * subst(B2),
+            }
+        }
+
+        let lhs = subst(self);
+
+        let mut res = CubieLevel(
             [CornerCube {
                 c: CornerCubePos::UBR,
                 o: 0,
@@ -213,201 +419,18 @@ impl Mul for Subst {
             }; 12],
         );
         for i in 0..8 {
-            res.0[i] = rhs.0[self.0[i].c as usize];
-            res.0[i].o += self.0[i].o;
+            res.0[i] = rhs.0[lhs.0[i].c as usize];
+            res.0[i].o += lhs.0[i].o;
             res.0[i].o %= 3;
         }
 
         for i in 0..12 {
-            res.1[i] = rhs.1[self.1[i].e as usize];
-            res.1[i].o += self.1[i].o;
+            res.1[i] = rhs.1[lhs.1[i].e as usize];
+            res.1[i].o += lhs.1[i].o;
             res.1[i].o %= 2;
         }
 
         res
-    }
-}
-
-impl From<Move> for Subst {
-    fn from(p: Move) -> Subst {
-        use self::CornerCubePos::*;
-        use self::EdgeCubePos::*;
-        use self::Move::*;
-        match p {
-            U1 => Subst(
-                [
-                    CornerCube { c: UBR, o: 0 },
-                    CornerCube { c: URF, o: 0 },
-                    CornerCube { c: UFL, o: 0 },
-                    CornerCube { c: ULB, o: 0 },
-                    CornerCube { c: DFR, o: 0 },
-                    CornerCube { c: DLF, o: 0 },
-                    CornerCube { c: DBL, o: 0 },
-                    CornerCube { c: DRB, o: 0 },
-                ],
-                [
-                    EdgeCube { e: UB, o: 0 },
-                    EdgeCube { e: UR, o: 0 },
-                    EdgeCube { e: UF, o: 0 },
-                    EdgeCube { e: UL, o: 0 },
-                    EdgeCube { e: DR, o: 0 },
-                    EdgeCube { e: DF, o: 0 },
-                    EdgeCube { e: DL, o: 0 },
-                    EdgeCube { e: DB, o: 0 },
-                    EdgeCube { e: FR, o: 0 },
-                    EdgeCube { e: FL, o: 0 },
-                    EdgeCube { e: BL, o: 0 },
-                    EdgeCube { e: BR, o: 0 },
-                ],
-            ),
-            U2 => Self::from(U1) * Self::from(U1),
-            U3 => Self::from(U1) * Self::from(U2),
-
-            R1 => Subst(
-                [
-                    CornerCube { c: DFR, o: 2 },
-                    CornerCube { c: UFL, o: 0 },
-                    CornerCube { c: ULB, o: 0 },
-                    CornerCube { c: URF, o: 1 },
-                    CornerCube { c: DRB, o: 1 },
-                    CornerCube { c: DLF, o: 0 },
-                    CornerCube { c: DBL, o: 0 },
-                    CornerCube { c: UBR, o: 2 },
-                ],
-                [
-                    EdgeCube { e: FR, o: 0 },
-                    EdgeCube { e: UF, o: 0 },
-                    EdgeCube { e: UL, o: 0 },
-                    EdgeCube { e: UB, o: 0 },
-                    EdgeCube { e: BR, o: 0 },
-                    EdgeCube { e: DF, o: 0 },
-                    EdgeCube { e: DL, o: 0 },
-                    EdgeCube { e: DB, o: 0 },
-                    EdgeCube { e: DR, o: 0 },
-                    EdgeCube { e: FL, o: 0 },
-                    EdgeCube { e: BL, o: 0 },
-                    EdgeCube { e: UR, o: 0 },
-                ],
-            ),
-            R2 => Self::from(R1) * Self::from(R1),
-            R3 => Self::from(R1) * Self::from(R2),
-
-            F1 => Subst(
-                [
-                    CornerCube { c: UFL, o: 1 },
-                    CornerCube { c: DLF, o: 2 },
-                    CornerCube { c: ULB, o: 0 },
-                    CornerCube { c: UBR, o: 0 },
-                    CornerCube { c: URF, o: 2 },
-                    CornerCube { c: DFR, o: 1 },
-                    CornerCube { c: DBL, o: 0 },
-                    CornerCube { c: DRB, o: 0 },
-                ],
-                [
-                    EdgeCube { e: UR, o: 0 },
-                    EdgeCube { e: FL, o: 1 },
-                    EdgeCube { e: UL, o: 0 },
-                    EdgeCube { e: UB, o: 0 },
-                    EdgeCube { e: DR, o: 0 },
-                    EdgeCube { e: FR, o: 1 },
-                    EdgeCube { e: DL, o: 0 },
-                    EdgeCube { e: DB, o: 0 },
-                    EdgeCube { e: UF, o: 1 },
-                    EdgeCube { e: DF, o: 1 },
-                    EdgeCube { e: BL, o: 0 },
-                    EdgeCube { e: BR, o: 0 },
-                ],
-            ),
-            F2 => Self::from(F1) * Self::from(F1),
-            F3 => Self::from(F1) * Self::from(F2),
-
-            D1 => Subst(
-                [
-                    CornerCube { c: URF, o: 0 },
-                    CornerCube { c: UFL, o: 0 },
-                    CornerCube { c: ULB, o: 0 },
-                    CornerCube { c: UBR, o: 0 },
-                    CornerCube { c: DLF, o: 0 },
-                    CornerCube { c: DBL, o: 0 },
-                    CornerCube { c: DRB, o: 0 },
-                    CornerCube { c: DFR, o: 0 },
-                ],
-                [
-                    EdgeCube { e: UR, o: 0 },
-                    EdgeCube { e: UF, o: 0 },
-                    EdgeCube { e: UL, o: 0 },
-                    EdgeCube { e: UB, o: 0 },
-                    EdgeCube { e: DF, o: 0 },
-                    EdgeCube { e: DL, o: 0 },
-                    EdgeCube { e: DB, o: 0 },
-                    EdgeCube { e: DR, o: 0 },
-                    EdgeCube { e: FR, o: 0 },
-                    EdgeCube { e: FL, o: 0 },
-                    EdgeCube { e: BL, o: 0 },
-                    EdgeCube { e: BR, o: 0 },
-                ],
-            ),
-            D2 => Self::from(D1) * Self::from(D1),
-            D3 => Self::from(D1) * Self::from(D2),
-
-            L1 => Subst(
-                [
-                    CornerCube { c: URF, o: 0 },
-                    CornerCube { c: ULB, o: 1 },
-                    CornerCube { c: DBL, o: 2 },
-                    CornerCube { c: UBR, o: 0 },
-                    CornerCube { c: DFR, o: 0 },
-                    CornerCube { c: UFL, o: 2 },
-                    CornerCube { c: DLF, o: 1 },
-                    CornerCube { c: DRB, o: 0 },
-                ],
-                [
-                    EdgeCube { e: UR, o: 0 },
-                    EdgeCube { e: UF, o: 0 },
-                    EdgeCube { e: BL, o: 0 },
-                    EdgeCube { e: UB, o: 0 },
-                    EdgeCube { e: DR, o: 0 },
-                    EdgeCube { e: DF, o: 0 },
-                    EdgeCube { e: FL, o: 0 },
-                    EdgeCube { e: DB, o: 0 },
-                    EdgeCube { e: FR, o: 0 },
-                    EdgeCube { e: UL, o: 0 },
-                    EdgeCube { e: DL, o: 0 },
-                    EdgeCube { e: BR, o: 0 },
-                ],
-            ),
-            L2 => Self::from(L1) * Self::from(L1),
-            L3 => Self::from(L1) * Self::from(L2),
-
-            B1 => Subst(
-                [
-                    CornerCube { c: URF, o: 0 },
-                    CornerCube { c: UFL, o: 0 },
-                    CornerCube { c: UBR, o: 1 },
-                    CornerCube { c: DRB, o: 2 },
-                    CornerCube { c: DFR, o: 0 },
-                    CornerCube { c: DLF, o: 0 },
-                    CornerCube { c: ULB, o: 2 },
-                    CornerCube { c: DBL, o: 1 },
-                ],
-                [
-                    EdgeCube { e: UR, o: 0 },
-                    EdgeCube { e: UF, o: 0 },
-                    EdgeCube { e: UL, o: 0 },
-                    EdgeCube { e: BR, o: 1 },
-                    EdgeCube { e: DR, o: 0 },
-                    EdgeCube { e: DF, o: 0 },
-                    EdgeCube { e: DL, o: 0 },
-                    EdgeCube { e: BL, o: 1 },
-                    EdgeCube { e: FR, o: 0 },
-                    EdgeCube { e: FL, o: 0 },
-                    EdgeCube { e: UB, o: 1 },
-                    EdgeCube { e: DB, o: 1 },
-                ],
-            ),
-            B2 => Self::from(B1) * Self::from(B1),
-            B3 => Self::from(B1) * Self::from(B2),
-        }
     }
 }
 
@@ -425,14 +448,6 @@ mod tests {
             (L1, L2, L3),
             (R1, R2, R3),
         ] {
-            let m1 = Subst::from(*m1);
-            let m2 = Subst::from(*m2);
-            let m3 = Subst::from(*m3);
-
-            assert!(m1 != m2);
-            assert!(m2 != m3);
-            assert!(m3 != m1);
-
             assert_eq!(m1 * m1, m2);
             assert_eq!(m2 * m1, m3);
             assert_eq!(m3 * m3 * m3, m1);
