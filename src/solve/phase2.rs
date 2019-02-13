@@ -1,7 +1,10 @@
 use super::cube;
 
-#[cfg(test)]
-const P2_MOVES: [cube::Move; 10] = [
+const FACT4: usize = 4 * 3 * 2 * 1;
+const FACT8: usize = 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1;
+
+const P2_MOVES_SIZE: usize = 10;
+const P2_MOVES: [cube::Move; P2_MOVES_SIZE] = [
     cube::Move::U1,
     cube::Move::U2,
     cube::Move::U3,
@@ -42,7 +45,7 @@ impl From<CPerm> for cube::CubieLevel {
     // return a representation
     fn from(cp: CPerm) -> cube::CubieLevel {
         let mut idx = cp.0;
-        assert!(idx < 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1);
+        assert!(idx < FACT8 as u16);
 
         let mut res = cube::SOLVED;
         for i in (0..8).rev() {
@@ -110,7 +113,7 @@ impl From<EPerm> for cube::CubieLevel {
     // return a representation
     fn from(ep: EPerm) -> cube::CubieLevel {
         let mut idx = ep.0;
-        assert!(idx < 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1);
+        assert!(idx < FACT8 as u16);
 
         let mut res = cube::SOLVED;
         for i in (0..8).rev() {
@@ -181,7 +184,7 @@ impl From<UDSlice> for cube::CubieLevel {
     // return a representation
     fn from(uds: UDSlice) -> cube::CubieLevel {
         let mut idx = uds.0;
-        assert!(idx < 4 * 3 * 2 * 1);
+        assert!(idx < FACT4 as u8);
 
         let mut res = cube::SOLVED;
         for i in (0..4).rev() {
@@ -219,19 +222,48 @@ fn udslice() {
 }
 
 pub struct Phase2 {
-    cperm_movetable: [CPerm; 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1],
-    eperm_movetable: [EPerm; 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1],
-    udslice_movetable: [UDSlice; 4 * 3 * 2 * 1],
+    cperm_movetable: [CPerm; FACT8 * P2_MOVES_SIZE],
+    eperm_movetable: [EPerm; FACT8 * P2_MOVES_SIZE],
+    udslice_movetable: [UDSlice; FACT4 * P2_MOVES_SIZE],
 }
 
 impl Phase2 {
     fn new() -> Self {
         let mut p2 = Phase2 {
-            cperm_movetable: [CPerm(!0); 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1],
-            eperm_movetable: [EPerm(!0); 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1],
-            udslice_movetable: [UDSlice(!0); 4 * 3 * 2 * 1],
+            cperm_movetable: [CPerm(!0); FACT8 * P2_MOVES_SIZE],
+            eperm_movetable: [EPerm(!0); FACT8 * P2_MOVES_SIZE],
+            udslice_movetable: [UDSlice(!0); FACT4 * P2_MOVES_SIZE],
         };
 
+        // cperm
+        for i in 0..FACT8 {
+            let mut cube: cube::CubieLevel = CPerm(i as u16).into();
+            for m in P2_MOVES.iter() {
+                let m = *m;
+                let v: CPerm = (m * cube).into();
+                p2.cperm_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
+            }
+        }
+
+        // eperm
+        for i in 0..FACT8 {
+            let mut cube: cube::CubieLevel = CPerm(i as u16).into();
+            for m in P2_MOVES.iter() {
+                let m = *m;
+                let v: EPerm = (m * cube).into();
+                p2.eperm_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
+            }
+        }
+
+        // udslice
+        for i in 0..FACT8 {
+            let mut cube: cube::CubieLevel = CPerm(i as u16).into();
+            for m in P2_MOVES.iter() {
+                let m = *m;
+                let v: UDSlice = (m * cube).into();
+                p2.udslice_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
+            }
+        }
         p2
     }
 }
