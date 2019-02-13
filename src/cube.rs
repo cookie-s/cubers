@@ -29,31 +29,31 @@ pub const SOLVED: CubieLevel = CubieLevel(
     ],
 );
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum CornerCubePos {
     URF, UFL, ULB, UBR, DFR, DLF, DBL, DRB,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum EdgeCubePos {
     UR, UF, UL, UB, DR, DF, DL, DB, FR, FL, BL, BR,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct CornerCube {
     pub c: CornerCubePos,
     pub o: u8, // [0, 3)
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct EdgeCube {
     pub e: EdgeCubePos,
     pub o: u8, // [0, 2)
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum Move {
     U1, U2, U3,

@@ -3,19 +3,56 @@ use super::cube;
 const FACT4: usize = 4 * 3 * 2 * 1;
 const FACT8: usize = 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1;
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum P2Move {
+    U1,
+    U2,
+    U3,
+    D1,
+    D2,
+    D3,
+    F2,
+    B2,
+    L2,
+    R2,
+}
 const P2_MOVES_SIZE: usize = 10;
-const P2_MOVES: [cube::Move; P2_MOVES_SIZE] = [
-    cube::Move::U1,
-    cube::Move::U2,
-    cube::Move::U3,
-    cube::Move::D1,
-    cube::Move::D2,
-    cube::Move::D3,
-    cube::Move::F2,
-    cube::Move::B2,
-    cube::Move::L2,
-    cube::Move::R2,
+const P2_MOVES: [P2Move; P2_MOVES_SIZE] = [
+    P2Move::U1,
+    P2Move::U2,
+    P2Move::U3,
+    P2Move::D1,
+    P2Move::D2,
+    P2Move::D3,
+    P2Move::F2,
+    P2Move::B2,
+    P2Move::L2,
+    P2Move::R2,
 ];
+
+impl From<P2Move> for cube::Move {
+    fn from(m: P2Move) -> cube::Move {
+        match m {
+            P2Move::U1 => cube::Move::U1,
+            P2Move::U2 => cube::Move::U2,
+            P2Move::U3 => cube::Move::U3,
+            P2Move::D1 => cube::Move::D1,
+            P2Move::D2 => cube::Move::D2,
+            P2Move::D3 => cube::Move::D3,
+            P2Move::F2 => cube::Move::F2,
+            P2Move::B2 => cube::Move::B2,
+            P2Move::L2 => cube::Move::L2,
+            P2Move::R2 => cube::Move::R2,
+        }
+    }
+}
+impl std::ops::Mul<cube::CubieLevel> for P2Move {
+    type Output = cube::CubieLevel;
+    fn mul(self, rhs: cube::CubieLevel) -> cube::CubieLevel {
+        let m: cube::Move = self.into();
+        m * rhs
+    }
+}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct CPerm(u16); // Corner Permutation Coordinate
@@ -129,7 +166,6 @@ impl From<EPerm> for cube::CubieLevel {
 
 #[test]
 fn eperm() {
-    use super::cube::Move::*;
     use super::*;
     for m in P2_MOVES.iter() {
         let m = *m;
@@ -222,22 +258,22 @@ fn udslice() {
 }
 
 pub struct Phase2 {
-    cperm_movetable: [CPerm; FACT8 * P2_MOVES_SIZE],
-    eperm_movetable: [EPerm; FACT8 * P2_MOVES_SIZE],
-    udslice_movetable: [UDSlice; FACT4 * P2_MOVES_SIZE],
+    cperm_movetable: Vec<CPerm>,     // FACT8 * P2_MOVES_SIZE
+    eperm_movetable: Vec<EPerm>,     // FACT8 * P2_MOVES_SIZE
+    udslice_movetable: Vec<UDSlice>, // FACT4 * P2_MOVES_SIZE
 }
 
 impl Phase2 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let mut p2 = Phase2 {
-            cperm_movetable: [CPerm(!0); FACT8 * P2_MOVES_SIZE],
-            eperm_movetable: [EPerm(!0); FACT8 * P2_MOVES_SIZE],
-            udslice_movetable: [UDSlice(!0); FACT4 * P2_MOVES_SIZE],
+            cperm_movetable: vec![CPerm(!0); FACT8 * P2_MOVES_SIZE],
+            eperm_movetable: vec![EPerm(!0); FACT8 * P2_MOVES_SIZE],
+            udslice_movetable: vec![UDSlice(!0); FACT4 * P2_MOVES_SIZE],
         };
 
         // cperm
         for i in 0..FACT8 {
-            let mut cube: cube::CubieLevel = CPerm(i as u16).into();
+            let cube: cube::CubieLevel = CPerm(i as u16).into();
             for m in P2_MOVES.iter() {
                 let m = *m;
                 let v: CPerm = (m * cube).into();
@@ -247,7 +283,7 @@ impl Phase2 {
 
         // eperm
         for i in 0..FACT8 {
-            let mut cube: cube::CubieLevel = CPerm(i as u16).into();
+            let cube: cube::CubieLevel = EPerm(i as u16).into();
             for m in P2_MOVES.iter() {
                 let m = *m;
                 let v: EPerm = (m * cube).into();
@@ -256,8 +292,8 @@ impl Phase2 {
         }
 
         // udslice
-        for i in 0..FACT8 {
-            let mut cube: cube::CubieLevel = CPerm(i as u16).into();
+        for i in 0..FACT4 {
+            let cube: cube::CubieLevel = UDSlice(i as u8).into();
             for m in P2_MOVES.iter() {
                 let m = *m;
                 let v: UDSlice = (m * cube).into();
@@ -268,8 +304,9 @@ impl Phase2 {
     }
 }
 
+use std::convert::{TryFrom, TryInto};
 struct Phase2Cube(cube::RubikCube);
-impl core::convert::TryFrom<cube::RubikCube> for Phase2Cube {
+impl TryFrom<cube::RubikCube> for Phase2Cube {
     type Error = ();
     fn try_from(src: cube::RubikCube) -> Result<Self, Self::Error> {
         fn is_phase2(cube: cube::RubikCube) -> bool {
@@ -288,9 +325,104 @@ impl core::convert::TryFrom<cube::RubikCube> for Phase2Cube {
     }
 }
 
+use std::collections::BinaryHeap;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct Phase2Vec(u64);
+impl<T: Into<Phase2Cube>> From<T> for Phase2Vec {
+    fn from(src: T) -> Phase2Vec {
+        let src: Phase2Cube = src.into();
+        let (v1, v2, v3): (CPerm, EPerm, UDSlice) =
+            ((src.0).0.into(), (src.0).0.into(), (src.0).0.into());
+        Self::combine(v1, v2, v3)
+    }
+}
+
+impl Phase2Vec {
+    fn split(self) -> (CPerm, EPerm, UDSlice) {
+        let t = self.0;
+        let v3 = t % FACT4 as u64;
+
+        let t = t / FACT4 as u64;
+        let v2 = t % FACT8 as u64;
+
+        let v1 = t / FACT8 as u64;
+
+        (CPerm(v1 as u16), EPerm(v2 as u16), UDSlice(v3 as u8))
+    }
+
+    fn combine(cp: CPerm, ep: EPerm, uds: UDSlice) -> Self {
+        Phase2Vec(((cp.0 as u64 * FACT8 as u64) + ep.0 as u64) * FACT4 as u64 + uds.0 as u64)
+    }
+
+    fn rotate(self, p2: &Phase2, m: P2Move) -> Self {
+        let (cp, ep, uds) = self.split();
+        let (cp, ep, uds) = (cp.0 as usize, ep.0 as usize, uds.0 as usize);
+        let v1 = p2.cperm_movetable[cp * P2_MOVES_SIZE + m as usize];
+        let v2 = p2.eperm_movetable[ep * P2_MOVES_SIZE + m as usize];
+        let v3 = p2.udslice_movetable[uds * P2_MOVES_SIZE + m as usize];
+
+        Self::combine(v1, v2, v3)
+    }
+}
+
+#[test]
+fn rotate_test() {
+    use super::*;
+    let p2 = Phase2::new();
+
+    let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
+    let solved: Phase2Vec = solved.into();
+
+    for m in P2_MOVES.iter() {
+        let m = *m;
+
+        let cube = m * (m * cube::SOLVED);
+        let cube: Phase2Cube = cube::RubikCube(cube).try_into().unwrap();
+        let v1: Phase2Vec = cube.into();
+
+        let v2 = solved.rotate(&p2, m).rotate(&p2, m);
+        assert_eq!(v1.split(), v2.split(), "twice move {:?}", m);
+    }
+}
+
+impl Phase2 {
+    fn hoge(_: u64) -> Vec<cube::Move> {
+        // TODO
+        vec![]
+    }
+}
+
 impl super::Phase for Phase2 {
     type Error = ();
+
     fn solve(&self, src: &cube::RubikCube) -> Result<Vec<cube::Move>, Self::Error> {
-        Ok(vec![])
+        let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
+        let solved: Phase2Vec = solved.into();
+
+        let src: Phase2Cube = (*src).try_into()?;
+        let src: Phase2Vec = src.into();
+
+        const MAX_STEPS: usize = 7; // TODO: 18
+        let mut heap = BinaryHeap::new();
+        heap.push((0, src, 0));
+
+        while let Some((dist, state, rotates)) = heap.pop() {
+            //println!("{:?}", state);
+
+            if state == solved {
+                println!("{}", dist);
+                return Ok(Self::hoge(rotates));
+            }
+            if dist >= MAX_STEPS {
+                continue;
+            }
+            for m in P2_MOVES.iter() {
+                let m = *m;
+                let newstate = state.rotate(self, m);
+                heap.push((dist + 1, newstate, rotates));
+            }
+        }
+        Err(())
     }
 }
