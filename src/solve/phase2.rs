@@ -377,13 +377,20 @@ fn rotate_test() {
     for m in P2_MOVES.iter() {
         let m = *m;
 
-        let cube = m * (m * cube::SOLVED);
+        let cube = m * cube::SOLVED;
         let cube: Phase2Cube = cube::RubikCube(cube).try_into().unwrap();
         let v1: Phase2Vec = cube.into();
 
-        let v2 = solved.rotate(&p2, m).rotate(&p2, m);
-        assert_eq!(v1.split(), v2.split(), "twice move {:?}", m);
+        let v2 = solved.rotate(&p2, m);
+        assert_eq!(v1.split(), v2.split(), "move {:?}", m);
     }
+
+    use P2Move::*;
+    let cube = cube::RubikCube(F2 * (U1 * (L2 * cube::SOLVED)));
+    let cube: Phase2Cube = cube.try_into().unwrap();
+    let cube: Phase2Vec = cube.into();
+    let cube = cube.rotate(&p2, F2).rotate(&p2, U3).rotate(&p2, L2);
+    assert_eq!(cube.split(), solved.split());
 }
 
 impl Phase2 {
@@ -403,11 +410,12 @@ impl super::Phase for Phase2 {
         let src: Phase2Cube = (*src).try_into()?;
         let src: Phase2Vec = src.into();
 
-        const MAX_STEPS: usize = 7; // TODO: 18
+        const MAX_STEPS: isize = 7; // TODO: 18
         let mut heap = BinaryHeap::new();
-        heap.push((0, src, 0));
+        heap.push((-0, src, 0));
 
         while let Some((dist, state, rotates)) = heap.pop() {
+            let dist = -dist;
             //println!("{:?}", state);
 
             if state == solved {
@@ -420,7 +428,7 @@ impl super::Phase for Phase2 {
             for m in P2_MOVES.iter() {
                 let m = *m;
                 let newstate = state.rotate(self, m);
-                heap.push((dist + 1, newstate, rotates));
+                heap.push((-(dist + 1), newstate, rotates));
             }
         }
         Err(())
