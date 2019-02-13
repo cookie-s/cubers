@@ -64,9 +64,10 @@ pub enum Move {
     R1, R2, R3,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct CubieLevel(pub [CornerCube; 8], pub [EdgeCube; 12]);
 
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct RubikCube(pub CubieLevel);
 
 impl fmt::Debug for RubikCube {
@@ -438,22 +439,25 @@ impl Mul<CubieLevel> for Move {
 mod tests {
     #[test]
     fn jimei() {
-        use super::Subst;
         use super::Move::*;
-        for (m1, m2, m3) in &[
+        use super::*;
+        for (m1, m2, m3) in [
             (U1, U2, U3),
             (D1, D2, D3),
             (F1, F2, F3),
             (B1, B2, B3),
             (L1, L2, L3),
             (R1, R2, R3),
-        ] {
-            assert_eq!(m1 * m1, m2);
-            assert_eq!(m2 * m1, m3);
-            assert_eq!(m3 * m3 * m3, m1);
-            assert_eq!(m1 * m2 * m2, m1);
-            assert_eq!(m2 * m1 * m2, m1);
-            assert_eq!(m2 * m2 * m1, m1);
+        ]
+        .iter()
+        {
+            let (m1, m2, m3) = (*m1, *m2, *m3);
+            assert_eq!(RubikCube(m1 * (m1 * SOLVED)), RubikCube(m2 * SOLVED));
+            assert_eq!(RubikCube(m2 * (m1 * SOLVED)), RubikCube(m3 * SOLVED));
+            assert_eq!(RubikCube(m3 * (m3 * (m3 * SOLVED))), RubikCube(m1 * SOLVED));
+            assert_eq!(RubikCube(m1 * (m2 * (m2 * SOLVED))), RubikCube(m1 * SOLVED));
+            assert_eq!(RubikCube(m2 * (m1 * (m2 * SOLVED))), RubikCube(m1 * SOLVED));
+            assert_eq!(RubikCube(m2 * (m2 * (m1 * SOLVED))), RubikCube(m1 * SOLVED));
         }
     }
 }
