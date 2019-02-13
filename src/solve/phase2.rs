@@ -268,8 +268,29 @@ impl Phase2 {
     }
 }
 
+struct Phase2Cube(cube::RubikCube);
+impl core::convert::TryFrom<cube::RubikCube> for Phase2Cube {
+    type Error = ();
+    fn try_from(src: cube::RubikCube) -> Result<Self, Self::Error> {
+        fn is_phase2(cube: cube::RubikCube) -> bool {
+            (cube.0).0.iter().all(|c| c.o == 0)
+                && (cube.0).1.iter().all(|e| e.o == 0)
+                && (cube.0)
+                    .1
+                    .iter()
+                    .enumerate()
+                    .all(|(i, e)| i < 8 || (e.e as u16 >= 8))
+        }
+        if !is_phase2(src) {
+            return Err(());
+        }
+        Ok(Phase2Cube(src))
+    }
+}
+
 impl super::Phase for Phase2 {
-    fn solve(&self, src: &cube::RubikCube) -> Vec<cube::Move> {
-        vec![]
+    type Error = ();
+    fn solve(&self, src: &cube::RubikCube) -> Result<Vec<cube::Move>, Self::Error> {
+        Ok(vec![])
     }
 }
