@@ -1,5 +1,6 @@
 use super::cube;
 
+#[cfg(test)]
 const P2_MOVES: [cube::Move; 10] = [
     cube::Move::U1,
     cube::Move::U2,
@@ -75,17 +76,6 @@ fn cperm() {
         );
     }
 }
-
-const P2_EDGES: [u16; 8] = ([
-    cube::EdgeCubePos::UR as u16,
-    cube::EdgeCubePos::UF as u16,
-    cube::EdgeCubePos::UL as u16,
-    cube::EdgeCubePos::UB as u16,
-    cube::EdgeCubePos::DR as u16,
-    cube::EdgeCubePos::DF as u16,
-    cube::EdgeCubePos::DL as u16,
-    cube::EdgeCubePos::DB as u16,
-]);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct EPerm(u16); // Edge Permutation Coordinate
