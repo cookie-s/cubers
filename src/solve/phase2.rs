@@ -16,6 +16,37 @@ enum P2Move {
     L2,
     R2,
 }
+impl P2Move {
+    fn from_usize(n: usize) -> Self {
+        match n {
+            0 => P2Move::U1,
+            1 => P2Move::U2,
+            2 => P2Move::U3,
+            3 => P2Move::D1,
+            4 => P2Move::D2,
+            5 => P2Move::D3,
+            6 => P2Move::F2,
+            7 => P2Move::B2,
+            8 => P2Move::L2,
+            9 => P2Move::R2,
+            _ => panic!("invalid argument"),
+        }
+    }
+    fn to_usize(&self) -> usize {
+        match self {
+            P2Move::U1 => 0,
+            P2Move::U2 => 1,
+            P2Move::U3 => 2,
+            P2Move::D1 => 3,
+            P2Move::D2 => 4,
+            P2Move::D3 => 5,
+            P2Move::F2 => 6,
+            P2Move::B2 => 7,
+            P2Move::L2 => 8,
+            P2Move::R2 => 9,
+        }
+    }
+}
 
 const P2_MOVES_SIZE: usize = 10;
 const P2_MOVES: [P2Move; P2_MOVES_SIZE] = [
@@ -272,7 +303,7 @@ impl TryFrom<cube::RubikCube> for Phase2Cube {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct Phase2Vec(u64);
 impl<T: Into<Phase2Cube>> From<T> for Phase2Vec {
     fn from(src: T) -> Phase2Vec {
@@ -339,28 +370,35 @@ fn rotate_test() {
     assert_eq!(cube.split(), solved.split());
 }
 
-impl Phase2 {
-    fn hoge(_: u64) -> Vec<cube::Move> {
-        // TODO
-        vec![]
-    }
-}
-
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashSet};
 
 impl super::Phase for Phase2 {
     type Error = ();
 
     fn solve(&self, src: &cube::RubikCube) -> Result<Vec<cube::Move>, Self::Error> {
+        fn recover_rotates(dist: usize, rotates: u64) -> Vec<cube::Move> {
+            let mut rotates = rotates;
+            let mut res = vec![cube::Move::U1; dist];
+
+            for i in 0..dist {
+                let p2move = P2Move::from_usize(rotates as usize % 10);
+                res[dist - 1 - i] = p2move.into();
+                rotates /= 10;
+            }
+            res
+        }
+
         let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
         let solved: Phase2Vec = solved.into();
 
         let src: Phase2Cube = (*src).try_into()?;
         let src: Phase2Vec = src.into();
 
-        const MAX_STEPS: isize = 7; // TODO: 18
+        const MAX_STEPS: isize = 10; // TODO: 18
         let mut heap = BinaryHeap::new();
+        let mut set = HashSet::new();
         heap.push((-0, src, 0));
+        set.insert(src);
 
         while let Some((dist, state, rotates)) = heap.pop() {
             let dist = -dist;
@@ -368,7 +406,7 @@ impl super::Phase for Phase2 {
 
             if state == solved {
                 println!("{}", dist);
-                return Ok(Self::hoge(rotates));
+                return Ok(recover_rotates(dist as usize, rotates));
             }
             if dist >= MAX_STEPS {
                 continue;
@@ -376,7 +414,14 @@ impl super::Phase for Phase2 {
             for m in P2_MOVES.iter() {
                 let m = *m;
                 let newstate = state.rotate(self, m);
-                heap.push((-(dist + 1), newstate, rotates));
+                if !set.contains(&newstate) {
+                    set.insert(newstate); // TODO: ayashii
+                    heap.push((
+                        -(dist + 1),
+                        newstate,
+                        rotates * P2_MOVES_SIZE as u64 + m.to_usize() as u64,
+                    ));
+                }
             }
         }
         Err(())
