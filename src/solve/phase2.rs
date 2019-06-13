@@ -16,6 +16,7 @@ enum P2Move {
     L2,
     R2,
 }
+
 const P2_MOVES_SIZE: usize = 10;
 const P2_MOVES: [P2Move; P2_MOVES_SIZE] = [
     P2Move::U1,
@@ -46,6 +47,7 @@ impl From<P2Move> for cube::Move {
         }
     }
 }
+
 impl std::ops::Mul<cube::CubieLevel> for P2Move {
     type Output = cube::CubieLevel;
     fn mul(self, rhs: cube::CubieLevel) -> cube::CubieLevel {
@@ -58,41 +60,26 @@ impl std::ops::Mul<cube::CubieLevel> for P2Move {
 struct CPerm(u16); // Corner Permutation Coordinate
 impl From<cube::CubieLevel> for CPerm {
     fn from(cl: cube::CubieLevel) -> CPerm {
-        let mut aa = [0; 8];
-        for i in 0..8 {
-            aa[i] = i as u16;
-        }
+        use super::util::FisherShuffle;
+        let shuffle = FisherShuffle::new(8);
 
-        let mut res = 0;
-        let mut b = 1;
-        for (i, c) in cl.0.iter().map(|c| c.c as u16).enumerate().rev() {
-            let k = aa.iter().position(|&x| c == x).unwrap();
-            res += k * b;
-            b *= i + 1;
-
-            let t = aa[i];
-            aa[i] = aa[k];
-            aa[k] = t;
-        }
-
+        let array: Vec<_> = cl.0.iter().map(|c| c.c as u16).collect();
+        let res = shuffle.array_to_num(&array);
         CPerm(res as u16)
     }
 }
 impl From<CPerm> for cube::CubieLevel {
     // return a representation
     fn from(cp: CPerm) -> cube::CubieLevel {
-        let mut idx = cp.0;
-        assert!(idx < FACT8 as u16);
+        use super::util::FisherShuffle;
+        let shuffle = FisherShuffle::new(8);
 
+        let array = shuffle.num_to_array(cp.0 as usize);
         let mut res = cube::SOLVED;
-        for i in (0..8).rev() {
-            let j = idx % (i + 1);
-            let t = res.0[i as usize].c;
-            res.0[i as usize].c = res.0[j as usize].c;
-            res.0[j as usize].c = t;
-            idx /= i + 1;
+        for i in 0..8 {
+            res.0[i as usize].c = cube::SOLVED.0[array[i]].c;
         }
-        res
+        return res;
     }
 }
 
@@ -121,44 +108,24 @@ fn cperm() {
 struct EPerm(u16); // Edge Permutation Coordinate
 impl From<cube::CubieLevel> for EPerm {
     fn from(cl: cube::CubieLevel) -> EPerm {
-        let mut aa = [0; 8];
-        for i in 0..8 {
-            aa[i] = i as u16;
-        }
+        use super::util::FisherShuffle;
+        let shuffle = FisherShuffle::new(8);
 
-        let mut res = 0;
-        let mut b = 1;
-        for (i, e) in cl.1.iter().map(|e| e.e as u16).enumerate().rev() {
-            // FIXME: Take does not implement DoubleEndedIterator...
-            if i >= 8 {
-                continue;
-            }
-
-            let k = aa.iter().position(|&x| e == x).unwrap();
-            res += k * b;
-            b *= i + 1;
-
-            let t = aa[i];
-            aa[i] = aa[k];
-            aa[k] = t;
-        }
-
+        let array: Vec<_> = cl.1.iter().map(|e| e.e as u16).take(8).collect();
+        let res = shuffle.array_to_num(&array);
         EPerm(res as u16)
     }
 }
 impl From<EPerm> for cube::CubieLevel {
     // return a representation
     fn from(ep: EPerm) -> cube::CubieLevel {
-        let mut idx = ep.0;
-        assert!(idx < FACT8 as u16);
+        use super::util::FisherShuffle;
+        let shuffle = FisherShuffle::new(8);
 
+        let array = shuffle.num_to_array(ep.0 as usize);
         let mut res = cube::SOLVED;
-        for i in (0..8).rev() {
-            let j = idx % (i + 1);
-            let t = res.1[i as usize].e;
-            res.1[i as usize].e = res.1[j as usize].e;
-            res.1[j as usize].e = t;
-            idx /= i + 1;
+        for i in 0..8 {
+            res.1[i as usize].e = cube::SOLVED.1[array[i]].e;
         }
         res
     }
@@ -191,44 +158,24 @@ fn eperm() {
 struct UDSlice(u8); // phase2 UDSlice Coordinate
 impl From<cube::CubieLevel> for UDSlice {
     fn from(cl: cube::CubieLevel) -> UDSlice {
-        let mut aa = [0; 4];
-        for i in 0..4 {
-            aa[i] = i as u16 + 8;
-        }
+        use super::util::FisherShuffle;
+        let shuffle = FisherShuffle::new(4);
 
-        let mut res = 0;
-        let mut b = 1;
-        for (i, c) in cl.1.iter().map(|e| e.e as u16).enumerate().rev() {
-            if i < 8 {
-                continue;
-            }
-            let i = i - 8;
-
-            let k = aa.iter().position(|&x| c == x).unwrap();
-            res += k * b;
-            b *= i + 1;
-
-            let t = aa[i];
-            aa[i] = aa[k];
-            aa[k] = t;
-        }
-
+        let array: Vec<_> = cl.1.iter().skip(8).map(|e| e.e as u16 - 8).collect();
+        let res = shuffle.array_to_num(&array);
         UDSlice(res as u8)
     }
 }
 impl From<UDSlice> for cube::CubieLevel {
     // return a representation
     fn from(uds: UDSlice) -> cube::CubieLevel {
-        let mut idx = uds.0;
-        assert!(idx < FACT4 as u8);
+        use super::util::FisherShuffle;
+        let shuffle = FisherShuffle::new(4);
 
+        let array = shuffle.num_to_array(uds.0 as usize);
         let mut res = cube::SOLVED;
-        for i in (0..4).rev() {
-            let j = idx % (i + 1);
-            let t = res.1[i as usize + 8].e;
-            res.1[i as usize + 8].e = res.1[j as usize + 8].e;
-            res.1[j as usize + 8].e = t;
-            idx /= i + 1;
+        for i in 0..4 {
+            res.1[i as usize + 8].e = cube::SOLVED.1[array[i] + 8].e;
         }
         res
     }
@@ -325,8 +272,6 @@ impl TryFrom<cube::RubikCube> for Phase2Cube {
     }
 }
 
-use std::collections::BinaryHeap;
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 struct Phase2Vec(u64);
 impl<T: Into<Phase2Cube>> From<T> for Phase2Vec {
@@ -358,6 +303,7 @@ impl Phase2Vec {
     fn rotate(self, p2: &Phase2, m: P2Move) -> Self {
         let (cp, ep, uds) = self.split();
         let (cp, ep, uds) = (cp.0 as usize, ep.0 as usize, uds.0 as usize);
+
         let v1 = p2.cperm_movetable[cp * P2_MOVES_SIZE + m as usize];
         let v2 = p2.eperm_movetable[ep * P2_MOVES_SIZE + m as usize];
         let v3 = p2.udslice_movetable[uds * P2_MOVES_SIZE + m as usize];
@@ -399,6 +345,8 @@ impl Phase2 {
         vec![]
     }
 }
+
+use std::collections::BinaryHeap;
 
 impl super::Phase for Phase2 {
     type Error = ();
