@@ -287,8 +287,8 @@ impl Phase2 {
 
             let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
             let solved: Phase2Vec = solved.into();
-            let eperm = solved.split().1;
-            p2.prunetable[eperm.0 as usize] = 0;
+            let pc = solved.prune_coord();
+            p2.prunetable[pc] = 0;
 
             queue.push_back((0, solved));
 
@@ -299,10 +299,10 @@ impl Phase2 {
                 for m in P2_MOVES.iter() {
                     let m = *m;
                     let nextstate = state.rotate(&p2, m);
-                    let nexteperm = nextstate.split().1;
-                    if p2.prunetable[nexteperm.0 as usize] == !0 {
-                        p2.prunetable[nexteperm.0 as usize] = dis + 1;
-                        queue.push_back((dis + 1, nextstate));
+                    let nextpc = nextstate.prune_coord();
+                    if p2.prunetable[nextpc] == !0 {
+                        p2.prunetable[nextpc] = (dis + 1) % 3;
+                        queue.push_back(((dis + 1), nextstate));
                         cnt += 1;
                     }
                 }
@@ -372,6 +372,10 @@ impl Phase2Vec {
 
         Self::combine(v1, v2, v3)
     }
+
+    fn prune_coord(self) -> usize {
+        (self.split().1).0 as usize
+    }
 }
 
 #[test]
@@ -425,35 +429,60 @@ impl super::Phase for Phase2 {
         let src: Phase2Cube = (*src).try_into()?;
         let src: Phase2Vec = src.into();
 
-        const MAX_STEPS: isize = 14; // TODO: 18
+        fn cur_lowerbound(p2: &Phase2, src: Phase2Vec) -> u8 {
+            let mut heap = BinaryHeap::new();
+            heap.push((-0, src.prune_coord()));
+            let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
+            let solved: Phase2Vec = solved.into();
+            let goalpc = solved.prune_coord();
+            loop {
+                let (dist, pc) = heap.pop().unwrap();
+                let dist = -dist;
+                if pc == goalpc {
+                    return dist as u8;
+                }
+                for m in P2_MOVES.iter() {
+                    let m = *m;
+                    let npc = p2.eperm_movetable[pc * P2_MOVES_SIZE + (m as usize)].0 as usize;
+                    if p2.prunetable[npc] == (p2.prunetable[pc] + 2) % 3 {
+                        heap.push((-(dist + 1), npc));
+                    }
+                }
+            }
+        }
+
+        let lb = cur_lowerbound(&self, src);
+
+        const MAX_STEPS: isize = 13; // TODO: 18
         let mut heap = BinaryHeap::new();
         let mut set = HashSet::new();
-        heap.push((-0, src, 0));
+        heap.push((-0, src, lb, 0));
         set.insert(src);
 
-        while let Some((dist, state, rotates)) = heap.pop() {
+        while let Some((dist, state, lb, rotates)) = heap.pop() {
             let dist = -dist;
-            let pruneval = self.prunetable[(state.split().1).0 as usize];
-            //println!("{:?}", state);
 
             if state == solved {
                 println!("{}", dist);
                 return Ok(recover_rotates(dist as usize, rotates));
             }
-            if dist + pruneval as isize > MAX_STEPS {
+            if dist + lb as isize > MAX_STEPS {
                 continue;
             }
             for m in P2_MOVES.iter() {
                 let m = *m;
-                let newstate = state.rotate(self, m);
-                if set.contains(&newstate) {
+                let nstate = state.rotate(self, m);
+                if set.contains(&nstate) {
                     continue;
                 }
+                let nlb =
+                    lb + ((3 + 1 + (self.prunetable[nstate.prune_coord()] % 3) - (lb % 3)) % 3) - 1;
 
-                set.insert(newstate); // TODO: ayashii
+                set.insert(nstate); // TODO: ayashii
                 heap.push((
                     -(dist + 1),
-                    newstate,
+                    nstate,
+                    nlb,
                     rotates * P2_MOVES_SIZE as u64 + m.to_usize() as u64,
                 ));
             }
