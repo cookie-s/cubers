@@ -5,20 +5,29 @@ fn main() {
     println!("Hello, world!");
 
     use cubers::cube::Move::*;
-    let mut c = cube::SOLVED;
+    let mut cl = cube::SOLVED;
     let v: Vec<cube::Move> = vec![
-        L2, U1, F2, D1, L2, F2, U1, U2, F2, U2, F2, U3, D1, D2, U3, L2, D1,
+        L2, U1, F2, D1, L2, F2, U1, D2, F2, U2, F2, U3, D1, L2, U3, L2, D1, U3, D2, L2, R2, B2,
     ];
-    let v: Vec<cube::Move> = v[0..13].to_vec();
+    let v: Vec<cube::Move> = v[..].to_vec();
     println!("{:?}", v);
 
     for m in v.iter() {
-        c = *m * c;
+        cl = *m * cl;
     }
 
-    let c = cube::RubikCube(c);
+    let c = cube::RubikCube(cl);
     println!("{:?}", c);
 
     let p2 = cubers::solve::phase2::Phase2::new();
-    println!("{:?}", p2.solve(&c));
+    let solve = p2.solve(&c);
+    println!("{:?}", solve);
+
+    if let Ok(moves) = solve {
+        for m in moves.iter() {
+            cl = *m * cl;
+        }
+        let c = cube::RubikCube(cl);
+        println!("{:?}", c);
+    }
 }

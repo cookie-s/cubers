@@ -11,10 +11,10 @@ pub enum SymMove {
     LR1,
 }
 
-const S_URF: [SymMove; 3] = [SymMove::ID, SymMove::URF1, SymMove::URF2];
-const S_F: [SymMove; 2] = [SymMove::ID, SymMove::F1];
-const S_U: [SymMove; 4] = [SymMove::ID, SymMove::U1, SymMove::U2, SymMove::U3];
-const S_LR: [SymMove; 2] = [SymMove::ID, SymMove::LR1];
+pub const S_URF: [SymMove; 3] = [SymMove::ID, SymMove::URF1, SymMove::URF2];
+pub const S_F: [SymMove; 2] = [SymMove::ID, SymMove::F1];
+pub const S_U: [SymMove; 4] = [SymMove::ID, SymMove::U1, SymMove::U2, SymMove::U3];
+pub const S_LR: [SymMove; 2] = [SymMove::ID, SymMove::LR1];
 
 impl SymMove {
     fn inv(self) -> Self {
@@ -89,18 +89,18 @@ impl Mul<CubieLevel> for SymMove {
                         CornerCube { c: DBL, o: 0 },
                     ],
                     [
-                        EdgeCube { e: UB, o: 0 },
-                        EdgeCube { e: UR, o: 0 },
-                        EdgeCube { e: UF, o: 0 },
-                        EdgeCube { e: UL, o: 0 },
-                        EdgeCube { e: DB, o: 0 },
-                        EdgeCube { e: DR, o: 0 },
-                        EdgeCube { e: DF, o: 0 },
-                        EdgeCube { e: DL, o: 0 },
-                        EdgeCube { e: BR, o: 0 },
-                        EdgeCube { e: FR, o: 0 },
-                        EdgeCube { e: FL, o: 0 },
-                        EdgeCube { e: BL, o: 0 },
+                        EdgeCube { e: UB, o: 1 },
+                        EdgeCube { e: UR, o: 1 },
+                        EdgeCube { e: UF, o: 1 },
+                        EdgeCube { e: UL, o: 1 },
+                        EdgeCube { e: DB, o: 1 },
+                        EdgeCube { e: DR, o: 1 },
+                        EdgeCube { e: DF, o: 1 },
+                        EdgeCube { e: DL, o: 1 },
+                        EdgeCube { e: BR, o: 1 },
+                        EdgeCube { e: FR, o: 1 },
+                        EdgeCube { e: FL, o: 1 },
+                        EdgeCube { e: BL, o: 1 },
                     ],
                 ),
                 U2 => U1 * subst(U1),
