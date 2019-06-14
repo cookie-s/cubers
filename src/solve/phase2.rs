@@ -239,7 +239,7 @@ pub struct Phase2 {
     cperm_movetable: Vec<CPerm>,     // FACT8 * P2_MOVES_SIZE
     eperm_movetable: Vec<EPerm>,     // FACT8 * P2_MOVES_SIZE
     udslice_movetable: Vec<UDSlice>, // FACT4 * P2_MOVES_SIZE
-    prunetable: Vec<u8>,             // FACT8 // TODO: this should be more efficient
+    prunetable: super::util::VecU2,  // FACT8 // TODO: this should be more efficient
 }
 
 impl Phase2 {
@@ -248,7 +248,7 @@ impl Phase2 {
             cperm_movetable: vec![CPerm(!0); FACT8 * P2_MOVES_SIZE],
             eperm_movetable: vec![EPerm(!0); FACT8 * P2_MOVES_SIZE],
             udslice_movetable: vec![UDSlice(!0); FACT4 * P2_MOVES_SIZE],
-            prunetable: vec![!0; FACT8],
+            prunetable: super::util::VecU2::new(!0, FACT8),
         };
 
         // cperm
@@ -288,7 +288,7 @@ impl Phase2 {
             let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
             let solved: Phase2Vec = solved.into();
             let pc = solved.prune_coord();
-            p2.prunetable[pc] = 0;
+            p2.prunetable.set(pc, 0);
 
             queue.push_back((0, solved));
 
@@ -300,8 +300,8 @@ impl Phase2 {
                     let m = *m;
                     let nextstate = state.rotate(&p2, m);
                     let nextpc = nextstate.prune_coord();
-                    if p2.prunetable[nextpc] == !0 {
-                        p2.prunetable[nextpc] = (dis + 1) % 3;
+                    if p2.prunetable.get(nextpc) == 3 {
+                        p2.prunetable.set(nextpc, (dis + 1) % 3);
                         queue.push_back(((dis + 1), nextstate));
                         cnt += 1;
                     }
@@ -335,7 +335,7 @@ impl TryFrom<cube::RubikCube> for Phase2Cube {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Phase2Vec(u64);
+struct Phase2Vec(u32, u16);
 impl<T: Into<Phase2Cube>> From<T> for Phase2Vec {
     fn from(src: T) -> Phase2Vec {
         let src: Phase2Cube = src.into();
@@ -347,19 +347,12 @@ impl<T: Into<Phase2Cube>> From<T> for Phase2Vec {
 
 impl Phase2Vec {
     fn split(self) -> (CPerm, EPerm, UDSlice) {
-        let t = self.0;
-        let v3 = t % FACT4 as u64;
-
-        let t = t / FACT4 as u64;
-        let v2 = t % FACT8 as u64;
-
-        let v1 = t / FACT8 as u64;
-
-        (CPerm(v1 as u16), EPerm(v2 as u16), UDSlice(v3 as u8))
+        let (cp, uds) = (self.0 / FACT4 as u32, self.0 % FACT4 as u32);
+        (CPerm(cp as u16), EPerm(self.1), UDSlice(uds as u8))
     }
 
     fn combine(cp: CPerm, ep: EPerm, uds: UDSlice) -> Self {
-        Phase2Vec(((cp.0 as u64 * FACT8 as u64) + ep.0 as u64) * FACT4 as u64 + uds.0 as u64)
+        Phase2Vec(cp.0 as u32 * FACT4 as u32 + uds.0 as u32, ep.0 as u16)
     }
 
     fn rotate(self, p2: &Phase2, m: P2Move) -> Self {
@@ -374,7 +367,7 @@ impl Phase2Vec {
     }
 
     fn prune_coord(self) -> usize {
-        (self.split().1).0 as usize
+        self.1 as usize
     }
 }
 
@@ -444,7 +437,7 @@ impl super::Phase for Phase2 {
                 for m in P2_MOVES.iter() {
                     let m = *m;
                     let npc = p2.eperm_movetable[pc * P2_MOVES_SIZE + (m as usize)].0 as usize;
-                    if p2.prunetable[npc] == (p2.prunetable[pc] + 2) % 3 {
+                    if p2.prunetable.get(npc) == (p2.prunetable.get(pc) + 2) % 3 {
                         heap.push((-(dist + 1), npc));
                     }
                 }
@@ -453,10 +446,10 @@ impl super::Phase for Phase2 {
 
         let lb = cur_lowerbound(&self, src);
 
-        const MAX_STEPS: isize = 13; // TODO: 18
+        const MAX_STEPS: i8 = 14; // TODO: 18
         let mut heap = BinaryHeap::new();
         let mut set = HashSet::new();
-        heap.push((-0, src, lb, 0));
+        heap.push((-0i8, src, lb, 0));
         set.insert(src);
 
         while let Some((dist, state, lb, rotates)) = heap.pop() {
@@ -466,7 +459,7 @@ impl super::Phase for Phase2 {
                 println!("{}", dist);
                 return Ok(recover_rotates(dist as usize, rotates));
             }
-            if dist + lb as isize > MAX_STEPS {
+            if dist + lb as i8 > MAX_STEPS {
                 continue;
             }
             for m in P2_MOVES.iter() {
@@ -475,12 +468,13 @@ impl super::Phase for Phase2 {
                 if set.contains(&nstate) {
                     continue;
                 }
-                let nlb =
-                    lb + ((3 + 1 + (self.prunetable[nstate.prune_coord()] % 3) - (lb % 3)) % 3) - 1;
-
                 set.insert(nstate); // TODO: ayashii
+
+                let nlb =
+                    lb + ((3 + 1 + (self.prunetable.get(nstate.prune_coord())) - (lb % 3)) % 3) - 1;
+
                 heap.push((
-                    -(dist + 1),
+                    -(dist + 1) as i8,
                     nstate,
                     nlb,
                     rotates * P2_MOVES_SIZE as u64 + m.to_usize() as u64,
