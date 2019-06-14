@@ -239,6 +239,7 @@ pub struct Phase2 {
     cperm_movetable: Vec<CPerm>,     // FACT8 * P2_MOVES_SIZE
     eperm_movetable: Vec<EPerm>,     // FACT8 * P2_MOVES_SIZE
     udslice_movetable: Vec<UDSlice>, // FACT4 * P2_MOVES_SIZE
+    prunetable: Vec<u8>,             // FACT8 // TODO: this should be more efficient
 }
 
 impl Phase2 {
@@ -247,6 +248,7 @@ impl Phase2 {
             cperm_movetable: vec![CPerm(!0); FACT8 * P2_MOVES_SIZE],
             eperm_movetable: vec![EPerm(!0); FACT8 * P2_MOVES_SIZE],
             udslice_movetable: vec![UDSlice(!0); FACT4 * P2_MOVES_SIZE],
+            prunetable: vec![!0; FACT8],
         };
 
         // cperm
@@ -278,6 +280,35 @@ impl Phase2 {
                 p2.udslice_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
             }
         }
+
+        {
+            let mut cnt = 1;
+            let mut queue = std::collections::VecDeque::new();
+
+            let solved: Phase2Cube = cube::RubikCube(cube::SOLVED).try_into().unwrap();
+            let solved: Phase2Vec = solved.into();
+            let eperm = solved.split().1;
+            p2.prunetable[eperm.0 as usize] = 0;
+
+            queue.push_back((0, solved));
+
+            while cnt < FACT8 {
+                let (dis, state) = queue.pop_front().unwrap();
+                let eperm: EPerm = state.split().1;
+
+                for m in P2_MOVES.iter() {
+                    let m = *m;
+                    let nextstate = state.rotate(&p2, m);
+                    let nexteperm = nextstate.split().1;
+                    if p2.prunetable[nexteperm.0 as usize] == !0 {
+                        p2.prunetable[nexteperm.0 as usize] = dis + 1;
+                        queue.push_back((dis + 1, nextstate));
+                        cnt += 1;
+                    }
+                }
+            }
+        }
+
         p2
     }
 }
@@ -370,12 +401,12 @@ fn rotate_test() {
     assert_eq!(cube.split(), solved.split());
 }
 
-use std::collections::{BinaryHeap, HashSet};
-
 impl super::Phase for Phase2 {
     type Error = ();
 
     fn solve(&self, src: &cube::RubikCube) -> Result<Vec<cube::Move>, Self::Error> {
+        use std::collections::{BinaryHeap, HashSet};
+
         fn recover_rotates(dist: usize, rotates: u64) -> Vec<cube::Move> {
             let mut rotates = rotates;
             let mut res = vec![cube::Move::U1; dist];
@@ -394,7 +425,7 @@ impl super::Phase for Phase2 {
         let src: Phase2Cube = (*src).try_into()?;
         let src: Phase2Vec = src.into();
 
-        const MAX_STEPS: isize = 10; // TODO: 18
+        const MAX_STEPS: isize = 14; // TODO: 18
         let mut heap = BinaryHeap::new();
         let mut set = HashSet::new();
         heap.push((-0, src, 0));
@@ -402,26 +433,29 @@ impl super::Phase for Phase2 {
 
         while let Some((dist, state, rotates)) = heap.pop() {
             let dist = -dist;
+            let pruneval = self.prunetable[(state.split().1).0 as usize];
             //println!("{:?}", state);
 
             if state == solved {
                 println!("{}", dist);
                 return Ok(recover_rotates(dist as usize, rotates));
             }
-            if dist >= MAX_STEPS {
+            if dist + pruneval as isize > MAX_STEPS {
                 continue;
             }
             for m in P2_MOVES.iter() {
                 let m = *m;
                 let newstate = state.rotate(self, m);
-                if !set.contains(&newstate) {
-                    set.insert(newstate); // TODO: ayashii
-                    heap.push((
-                        -(dist + 1),
-                        newstate,
-                        rotates * P2_MOVES_SIZE as u64 + m.to_usize() as u64,
-                    ));
+                if set.contains(&newstate) {
+                    continue;
                 }
+
+                set.insert(newstate); // TODO: ayashii
+                heap.push((
+                    -(dist + 1),
+                    newstate,
+                    rotates * P2_MOVES_SIZE as u64 + m.to_usize() as u64,
+                ));
             }
         }
         Err(())
