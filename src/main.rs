@@ -7,7 +7,8 @@ fn main() {
     use cubers::cube::Move::*;
     let mut cl = cube::SOLVED;
     let v: Vec<cube::Move> = vec![
-        L2, U1, F2, D1, L2, F2, U1, D2, F2, U2, F2, U3, D1, L2, U3, L2, D1, U3, D2, L2, R2, B2,
+        D1, L2, U3, L2, D3, B2, L2, U1, F2, D1, L2, F2, U1, D2, F2, U2, F2, U3, D1, L2, U3, L2, D1,
+        U3, D2, L2, R2, B2,
     ];
     let v: Vec<cube::Move> = v[..].to_vec();
     println!("{:?}", v);

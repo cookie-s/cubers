@@ -240,7 +240,6 @@ pub struct Phase2 {
     eperm_movetable: [EPerm; FACT8 * P2_MOVES_SIZE], // FACT8 * P2_MOVES_SIZE
     udslice_movetable: [UDSlice; FACT4 * P2_MOVES_SIZE], // FACT4 * P2_MOVES_SIZE
     sym_movetable: [u16; 2768 * P2_MOVES_SIZE],
-    sym_to_cperm: [CPerm; 2768],
     cperm_to_sym: [u16; FACT8],
     prunetable: super::util::VecU2,
 }
@@ -252,7 +251,6 @@ impl Phase2 {
             eperm_movetable: [EPerm(!0); FACT8 * P2_MOVES_SIZE],
             udslice_movetable: [UDSlice(!0); FACT4 * P2_MOVES_SIZE],
             sym_movetable: [!0; 2768 * P2_MOVES_SIZE],
-            sym_to_cperm: [CPerm(!0); 2768],
             cperm_to_sym: [!0; FACT8],
             prunetable: super::util::VecU2::new(!0, FACT8 * 2768),
         };
@@ -287,6 +285,7 @@ impl Phase2 {
             }
         }
 
+        let mut sym_to_cperm = [CPerm(!0); 2768];
         {
             let mut cnt = 0;
             for i in 0..FACT8 {
@@ -311,7 +310,7 @@ impl Phase2 {
                     }
                 }
                 if found == None {
-                    p2.sym_to_cperm[cnt] = cp;
+                    sym_to_cperm[cnt] = cp;
                     found = Some(cnt as u16);
                     cnt += 1;
                 }
@@ -320,7 +319,7 @@ impl Phase2 {
         }
 
         {
-            for (i, &v) in p2.sym_to_cperm.iter().enumerate() {
+            for (i, &v) in sym_to_cperm.iter().enumerate() {
                 let cp = v.0 as usize;
                 if cp as u16 == !0 {
                     continue;
@@ -334,7 +333,6 @@ impl Phase2 {
                 }
             }
         }
-        println!("wei");
 
         {
             let mut cnt = 1;
@@ -347,6 +345,7 @@ impl Phase2 {
             p2.prunetable.set(pc, 0);
 
             queue.push_back((0, solved));
+            let mut max = 0;
 
             while let Some((dis, state)) = queue.pop_front() {
                 for m in P2_MOVES.iter() {
@@ -354,13 +353,15 @@ impl Phase2 {
                     let nextstate = state.rotate(&p2, m);
                     let nextpc = nextstate.prune_coord(&p2);
                     if p2.prunetable.get(nextpc) == 3 {
+                        max = std::cmp::max(dis + 1, max);
+
                         p2.prunetable.set(nextpc, (dis + 1) % 3);
                         queue.push_back(((dis + 1), nextstate));
                         cnt += 1;
                     }
                 }
             }
-            println!("{}", cnt);
+            println!("{}", max);
         }
 
         println!("init done");
@@ -492,14 +493,18 @@ impl super::Phase for Phase2 {
                 if pc == goalpc {
                     return dist as u8;
                 }
+
+                // FIXME
+                let ep = pc % FACT8;
+                let i = pc / FACT8;
+
                 for m in 0..P2_MOVES_SIZE {
-                    let ep = pc % FACT8; // FIXME
+                    // FIXME
                     let nep = p2.eperm_movetable[ep * P2_MOVES_SIZE + m].0 as usize;
-                    let i = pc / FACT8;
                     let j = p2.sym_movetable[i * P2_MOVES_SIZE + m] as usize;
 
                     let npc = j * FACT8 + nep;
-                    if p2.prunetable.get(npc) == (p2.prunetable.get(pc) + 2) % 3 {
+                    if p2.prunetable.get(npc) == (3 + p2.prunetable.get(pc) - 1) % 3 {
                         heap.push((-(dist + 1), npc));
                     }
                 }
@@ -509,7 +514,7 @@ impl super::Phase for Phase2 {
         let lb = cur_lowerbound(&self, src);
         println!("{}", lb);
 
-        const MAX_STEPS: i8 = 19; // TODO: 18
+        const MAX_STEPS: i8 = 20;
         let mut heap = BinaryHeap::new();
         let mut set = HashSet::new();
         heap.push((-0i8, src, lb, 0));
