@@ -72,3 +72,36 @@ fn num2array2num_identity() {
         assert_eq!(num, i);
     }
 }
+
+pub struct VecU2 {
+    vec: Vec<u8>,
+    size: usize,
+}
+
+impl VecU2 {
+    pub fn new(init: u8, sz: usize) -> Self {
+        let mut init = init & 0x3;
+        init |= init << 2;
+        init |= init << 4;
+
+        VecU2 {
+            vec: vec![init; (sz + 3) / 4],
+            size: sz,
+        }
+    }
+
+    pub fn get(&self, idx: usize) -> u8 {
+        assert!(idx < self.size);
+
+        let (u8idx, u2idx) = (idx / 4, idx % 4);
+        ((self.vec[u8idx] >> (u2idx * 2)) & 0x3) as u8
+    }
+
+    pub fn set(&mut self, idx: usize, val: u8) {
+        assert!(idx < self.size);
+
+        let (u8idx, u2idx) = (idx / 4, idx % 4);
+        self.vec[u8idx] &= !(0x3 << (u2idx * 2));
+        self.vec[u8idx] |= (val & 0x3) << (u2idx * 2);
+    }
+}
