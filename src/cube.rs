@@ -29,31 +29,31 @@ pub const SOLVED: CubieLevel = CubieLevel(
     ],
 );
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum CornerCubePos {
     URF, UFL, ULB, UBR, DFR, DLF, DBL, DRB,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum EdgeCubePos {
     UR, UF, UL, UB, DR, DF, DL, DB, FR, FL, BL, BR,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct CornerCube {
     pub c: CornerCubePos,
     pub o: u8, // [0, 3)
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct EdgeCube {
     pub e: EdgeCubePos,
     pub o: u8, // [0, 2)
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, EnumCount, EnumIter)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub enum Move {
     U1, U2, U3,
@@ -336,22 +336,22 @@ mod tests {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, EnumCount, EnumIter, FromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter, FromPrimitive)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 enum SymF { F0, F1 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, EnumCount, EnumIter, FromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter, FromPrimitive)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 enum SymU { U0, U1, U2, U3 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, EnumCount, EnumIter, FromPrimitive)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter, FromPrimitive)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 enum SymLR { LR0, LR1 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct Sym16Vec(SymF, SymU, SymLR);
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Sym16(u8);
 const SYM16_COUNT: usize = 16;
 

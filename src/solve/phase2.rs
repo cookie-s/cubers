@@ -1,66 +1,20 @@
 use super::cube;
+use num_traits::cast::FromPrimitive;
+use strum::IntoEnumIterator;
 
 const FACT4: usize = 4 * 3 * 2 * 1;
 const FACT8: usize = 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1;
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, EnumCount, EnumIter, FromPrimitive)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 enum P2Move {
-    U1,
-    U2,
-    U3,
-    D1,
-    D2,
-    D3,
+    U1, U2, U3,
+    D1, D2, D3,
     F2,
     B2,
     L2,
     R2,
 }
-impl P2Move {
-    fn from_usize(n: usize) -> Self {
-        match n {
-            0 => P2Move::U1,
-            1 => P2Move::U2,
-            2 => P2Move::U3,
-            3 => P2Move::D1,
-            4 => P2Move::D2,
-            5 => P2Move::D3,
-            6 => P2Move::F2,
-            7 => P2Move::B2,
-            8 => P2Move::L2,
-            9 => P2Move::R2,
-            _ => panic!("invalid argument"),
-        }
-    }
-    fn to_usize(&self) -> usize {
-        match self {
-            P2Move::U1 => 0,
-            P2Move::U2 => 1,
-            P2Move::U3 => 2,
-            P2Move::D1 => 3,
-            P2Move::D2 => 4,
-            P2Move::D3 => 5,
-            P2Move::F2 => 6,
-            P2Move::B2 => 7,
-            P2Move::L2 => 8,
-            P2Move::R2 => 9,
-        }
-    }
-}
-
-const P2_MOVES_SIZE: usize = 10;
-const P2_MOVES: [P2Move; P2_MOVES_SIZE] = [
-    P2Move::U1,
-    P2Move::U2,
-    P2Move::U3,
-    P2Move::D1,
-    P2Move::D2,
-    P2Move::D3,
-    P2Move::F2,
-    P2Move::B2,
-    P2Move::L2,
-    P2Move::R2,
-];
 
 impl From<P2Move> for cube::Move {
     fn from(m: P2Move) -> cube::Move {
@@ -117,7 +71,7 @@ impl From<CPerm> for cube::CubieLevel {
 #[test]
 fn cperm() {
     use super::*;
-    for &m in P2_MOVES.iter() {
+    for m in P2Move::iter() {
         let cube = m * cube::SOLVED;
         let cp: CPerm = cube.into();
         assert_eq!(
@@ -164,7 +118,7 @@ impl From<EPerm> for cube::CubieLevel {
 #[test]
 fn eperm() {
     use super::*;
-    for &m in P2_MOVES.iter() {
+    for m in P2Move::iter() {
         let cube = m * cube::SOLVED;
         let ep: EPerm = cube.into();
         assert_eq!(
@@ -213,7 +167,7 @@ impl From<UDSlice> for cube::CubieLevel {
 #[test]
 fn udslice() {
     use super::*;
-    for &m in P2_MOVES.iter() {
+    for m in P2Move::iter() {
         let cube = m * cube::SOLVED;
         let ep: UDSlice = cube.into();
         assert_eq!(
@@ -233,10 +187,10 @@ fn udslice() {
 }
 
 pub struct Phase2 {
-    cperm_movetable: Vec<CPerm>,     // FACT8 * P2_MOVES_SIZE
-    eperm_movetable: Vec<EPerm>,     // FACT8 * P2_MOVES_SIZE
-    udslice_movetable: Vec<UDSlice>, // FACT4 * P2_MOVES_SIZE
-    sym_movetable: Vec<u16>,         // 2768 * P2_MOVES_SIZE
+    cperm_movetable: Vec<CPerm>,     // FACT8 * P2MOVE_COUNT
+    eperm_movetable: Vec<EPerm>,     // FACT8 * P2MOVE_COUNT
+    udslice_movetable: Vec<UDSlice>, // FACT4 * P2MOVE_COUNT
+    sym_movetable: Vec<u16>,         // 2768 * P2MOVE_COUNT
     cperm_to_sym: Vec<u16>,          // FACT8
     prunetable: Vec<u8>,             // 2768 * FACT8
 }
@@ -244,129 +198,129 @@ pub struct Phase2 {
 impl Phase2 {
     pub fn new() -> &'static Self {
         lazy_static! {
-            static ref P2: Phase2 = {
-                let mut p2 = Phase2 {
-                    cperm_movetable: vec![CPerm(!0); FACT8 * P2_MOVES_SIZE],
-                    eperm_movetable: vec![EPerm(!0); FACT8 * P2_MOVES_SIZE],
-                    udslice_movetable: vec![UDSlice(!0); FACT4 * P2_MOVES_SIZE],
-                    sym_movetable: vec![!0; 2768 * P2_MOVES_SIZE],
-                    cperm_to_sym: vec![!0; FACT8],
-                    prunetable: vec![!0; 2768 * FACT8],
-                };
+                static ref P2: Phase2 = {
+                    let mut p2 = Phase2 {
+                        cperm_movetable: vec![CPerm(!0); FACT8 * P2MOVE_COUNT],
+                        eperm_movetable: vec![EPerm(!0); FACT8 * P2MOVE_COUNT],
+                        udslice_movetable: vec![UDSlice(!0); FACT4 * P2MOVE_COUNT],
+                        sym_movetable: vec![!0; 2768 * P2MOVE_COUNT],
+                        cperm_to_sym: vec![!0; FACT8],
+                        prunetable: vec![!0; 2768 * FACT8],
+                    };
 
-                // cperm
-                for i in 0..FACT8 {
-                    let cube: cube::CubieLevel = CPerm(i as u16).into();
-                    for &m in P2_MOVES.iter() {
-                        let v: CPerm = (m * cube).into();
-                        p2.cperm_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
-                    }
-                }
-
-                // eperm
-                for i in 0..FACT8 {
-                    let cube: cube::CubieLevel = EPerm(i as u16).into();
-                    for &m in P2_MOVES.iter() {
-                        let v: EPerm = (m * cube).into();
-                        p2.eperm_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
-                    }
-                }
-
-                // udslice
-                for i in 0..FACT4 {
-                    let cube: cube::CubieLevel = UDSlice(i as u8).into();
-                    for &m in P2_MOVES.iter() {
-                        let v: UDSlice = (m * cube).into();
-                        p2.udslice_movetable[i * P2_MOVES_SIZE + (m as usize)] = v;
-                    }
-                }
-
-                let mut sym_to_cperm = [CPerm(!0); 2768];
-                {
-                    let mut cnt = 0;
+                    // cperm
                     for i in 0..FACT8 {
-                        let cp = CPerm(i as u16);
-                        let cube: cube::CubieLevel = cp.into();
-                        let mut found = None;
+                        let cube: cube::CubieLevel = CPerm(i as u16).into();
+        for m in P2Move::iter() {
+                            let v: CPerm = (m * cube).into();
+                            p2.cperm_movetable[i * P2MOVE_COUNT + (m as usize)] = v;
+                        }
+                    }
 
-                        for s in cube::Sym16::iter() {
-                            let cube = s * cube;
-                            let v: CPerm = cube.into();
+                    // eperm
+                    for i in 0..FACT8 {
+                        let cube: cube::CubieLevel = EPerm(i as u16).into();
+        for m in P2Move::iter() {
+                            let v: EPerm = (m * cube).into();
+                            p2.eperm_movetable[i * P2MOVE_COUNT + (m as usize)] = v;
+                        }
+                    }
 
-                            if p2.cperm_to_sym[v.0 as usize] != !0 {
-                                found = Some(p2.cperm_to_sym[v.0 as usize]);
-                                break;
+                    // udslice
+                    for i in 0..FACT4 {
+                        let cube: cube::CubieLevel = UDSlice(i as u8).into();
+        for m in P2Move::iter() {
+                            let v: UDSlice = (m * cube).into();
+                            p2.udslice_movetable[i * P2MOVE_COUNT + (m as usize)] = v;
+                        }
+                    }
+
+                    let mut sym_to_cperm = [CPerm(!0); 2768];
+                    {
+                        let mut cnt = 0;
+                        for i in 0..FACT8 {
+                            let cp = CPerm(i as u16);
+                            let cube: cube::CubieLevel = cp.into();
+                            let mut found = None;
+
+                            for s in cube::Sym16::iter() {
+                                let cube = s * cube;
+                                let v: CPerm = cube.into();
+
+                                if p2.cperm_to_sym[v.0 as usize] != !0 {
+                                    found = Some(p2.cperm_to_sym[v.0 as usize]);
+                                    break;
+                                }
+                            }
+                            if found == None {
+                                sym_to_cperm[cnt] = cp;
+                                found = Some(cnt as u16);
+                                cnt += 1;
+                            }
+                            p2.cperm_to_sym[i] = found.unwrap() as u16;
+                        }
+                    }
+
+        for m in P2Move::iter() {
+                        let cp: CPerm = (m * cube::SOLVED).into();
+                        let ep: EPerm = (m * cube::SOLVED).into();
+                        println!(
+                            "{:?} {:?} {:?} {:?}",
+                            m, cp, p2.cperm_to_sym[cp.0 as usize], ep
+                        );
+                    }
+
+                    {
+                        for (i, &v) in sym_to_cperm.iter().enumerate() {
+                            let cp = v.0 as usize;
+
+                            for m in 0..P2MOVE_COUNT {
+                                let ncp = p2.cperm_movetable[cp * P2MOVE_COUNT + m].0 as usize;
+                                let j = p2.cperm_to_sym[ncp];
+
+                                p2.sym_movetable[i * P2MOVE_COUNT + m] = j;
                             }
                         }
-                        if found == None {
-                            sym_to_cperm[cnt] = cp;
-                            found = Some(cnt as u16);
-                            cnt += 1;
-                        }
-                        p2.cperm_to_sym[i] = found.unwrap() as u16;
                     }
-                }
 
-                for &m in P2_MOVES.iter() {
-                    let cp: CPerm = (m * cube::SOLVED).into();
-                    let ep: EPerm = (m * cube::SOLVED).into();
-                    println!(
-                        "{:?} {:?} {:?} {:?}",
-                        m, cp, p2.cperm_to_sym[cp.0 as usize], ep
-                    );
-                }
+                    {
+                        let mut queue = std::collections::VecDeque::new();
 
-                {
-                    for (i, &v) in sym_to_cperm.iter().enumerate() {
-                        let cp = v.0 as usize;
+                        let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
+                        let solved: Phase2Vec = solved.into();
 
-                        for m in 0..P2_MOVES_SIZE {
-                            let ncp = p2.cperm_movetable[cp * P2_MOVES_SIZE + m].0 as usize;
-                            let j = p2.cperm_to_sym[ncp];
+                        queue.push_back((0, solved));
 
-                            p2.sym_movetable[i * P2_MOVES_SIZE + m] = j;
-                        }
-                    }
-                }
+                        while let Some((dis, state)) = queue.pop_front() {
+                            let pc = state.prune_coord(&p2);
+                            if p2.prunetable[pc] <= dis {
+                                continue;
+                            }
+                            p2.prunetable[pc] = dis;
 
-                {
-                    let mut queue = std::collections::VecDeque::new();
-
-                    let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-                    let solved: Phase2Vec = solved.into();
-
-                    queue.push_back((0, solved));
-
-                    while let Some((dis, state)) = queue.pop_front() {
-                        let pc = state.prune_coord(&p2);
-                        if p2.prunetable[pc] <= dis {
-                            continue;
-                        }
-                        p2.prunetable[pc] = dis;
-
-                        for &m in P2_MOVES.iter() {
-                            let nextstate = state.rotate(&p2, m);
-                            let nextpc = nextstate.prune_coord(&p2);
-                            if p2.prunetable[nextpc] > dis + 1 {
-                                queue.push_back(((dis + 1), nextstate));
+        for m in P2Move::iter() {
+                                let nextstate = state.rotate(&p2, m);
+                                let nextpc = nextstate.prune_coord(&p2);
+                                if p2.prunetable[nextpc] > dis + 1 {
+                                    queue.push_back(((dis + 1), nextstate));
+                                }
                             }
                         }
-                    }
 
-                    let mut t = [0; 25];
-                    for &v in p2.prunetable.iter() {
-                        if v == !0 {
-                            continue;
+                        let mut t = [0; 25];
+                        for &v in p2.prunetable.iter() {
+                            if v == !0 {
+                                continue;
+                            }
+                            t[v as usize] += 1;
                         }
-                        t[v as usize] += 1;
+                        println!("{:?}", t);
                     }
-                    println!("{:?}", t);
-                }
 
-                println!("init done");
-                p2
+                    println!("init done");
+                    p2
+                };
             };
-        };
 
         &P2
     }
@@ -418,9 +372,9 @@ impl Phase2Vec {
         let (cp, ep, uds) = self.split();
         let (cp, ep, uds) = (cp.0 as usize, ep.0 as usize, uds.0 as usize);
 
-        let v1 = p2.cperm_movetable[cp * P2_MOVES_SIZE + m as usize];
-        let v2 = p2.eperm_movetable[ep * P2_MOVES_SIZE + m as usize];
-        let v3 = p2.udslice_movetable[uds * P2_MOVES_SIZE + m as usize];
+        let v1 = p2.cperm_movetable[cp * P2MOVE_COUNT + m as usize];
+        let v2 = p2.eperm_movetable[ep * P2MOVE_COUNT + m as usize];
+        let v3 = p2.udslice_movetable[uds * P2MOVE_COUNT + m as usize];
 
         Self::combine(v1, v2, v3)
     }
@@ -440,7 +394,7 @@ fn rotate_test() {
     let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
     let solved: Phase2Vec = solved.into();
 
-    for &m in P2_MOVES.iter() {
+    for m in P2Move::iter() {
         let cube = m * cube::SOLVED;
         let cube: Phase2Cube = cube.try_into().unwrap();
         let v1: Phase2Vec = cube.into();
@@ -468,7 +422,7 @@ impl super::Phase for Phase2 {
             let mut res = vec![cube::Move::U1; dist];
 
             for i in 0..dist {
-                let p2move = P2Move::from_usize(rotates as usize % 10);
+                let p2move = P2Move::from_usize(rotates as usize % 10).unwrap();
                 res[dist - 1 - i] = p2move.into();
                 rotates /= 10;
             }
@@ -499,10 +453,10 @@ impl super::Phase for Phase2 {
                 let ep = pc % FACT8;
                 let i = pc / FACT8;
 
-                for &m in P2_MOVES.iter() {
+                for m in P2Move::iter() {
                     // FIXME
-                    let nep = p2.eperm_movetable[ep * P2_MOVES_SIZE + (m as usize)].0 as usize;
-                    let j = p2.sym_movetable[i * P2_MOVES_SIZE + (m as usize)] as usize;
+                    let nep = p2.eperm_movetable[ep * P2MOVE_COUNT + (m as usize)].0 as usize;
+                    let j = p2.sym_movetable[i * P2MOVE_COUNT + (m as usize)] as usize;
 
                     let npc = j * FACT8 + nep;
                     if p2.prunetable[npc] == p2.prunetable[pc] - 1 {
@@ -532,7 +486,7 @@ impl super::Phase for Phase2 {
             if dist + lb as i8 > MAX_STEPS {
                 continue;
             }
-            for &m in P2_MOVES.iter() {
+            for m in P2Move::iter() {
                 let nstate = state.rotate(self, m);
                 if set.contains(&nstate) {
                     continue;
@@ -545,7 +499,7 @@ impl super::Phase for Phase2 {
                     -(dist + 1) as i8,
                     nstate,
                     nlb,
-                    rotates * P2_MOVES_SIZE as u64 + m.to_usize() as u64,
+                    rotates * P2MOVE_COUNT as u64 + m as u64,
                 ));
             }
         }
