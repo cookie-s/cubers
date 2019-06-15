@@ -17,7 +17,7 @@ fn main() {
         cl = *m * cl;
     }
 
-    let c = cube::RubikCube(cl);
+    let c = cubers::RubikCube(cl);
     println!("{:?}", c);
 
     let p2 = cubers::solve::phase2::Phase2::new();
@@ -28,7 +28,7 @@ fn main() {
         for m in moves.iter() {
             cl = *m * cl;
         }
-        let c = cube::RubikCube(cl);
+        let c = cubers::RubikCube(cl);
         println!("{:?}", c);
     }
 }
