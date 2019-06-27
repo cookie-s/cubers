@@ -1,5 +1,6 @@
 use num_traits::cast::FromPrimitive;
 use std::ops::Mul;
+use strum::IntoEnumIterator;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 pub const SOLVED: CubieLevel = CubieLevel(
@@ -489,6 +490,16 @@ impl Inv for SymF {
         }
     }
 }
+impl Mul<SymF> for SymF {
+    type Output = SymF;
+
+    fn mul(self, rhs: SymF) -> Self::Output {
+        match self {
+            F0 => rhs,
+            F1 => rhs.inv(),
+        }
+    }
+}
 impl Mul<CubieLevel> for SymF {
     type Output = CubieLevel;
 
@@ -514,6 +525,13 @@ impl Inv for SymU {
         }
     }
 }
+impl Mul<SymU> for SymU {
+    type Output = SymU;
+
+    fn mul(self, rhs: SymU) -> Self::Output {
+        Self::from_usize((self as usize + rhs as usize) % SYMU_COUNT).unwrap()
+    }
+}
 impl Mul<CubieLevel> for SymU {
     type Output = CubieLevel;
 
@@ -534,6 +552,16 @@ impl Inv for SymLR {
         match self {
             LR0 => LR0,
             LR1 => LR1,
+        }
+    }
+}
+impl Mul<SymLR> for SymLR {
+    type Output = SymLR;
+
+    fn mul(self, rhs: SymLR) -> Self::Output {
+        match self {
+            LR0 => rhs,
+            LR1 => rhs.inv(),
         }
     }
 }
@@ -599,6 +627,25 @@ impl Inv for Sym16 {
     }
 }
 
+impl Mul<Sym16Vec> for Sym16Vec {
+    type Output = Sym16Vec;
+
+    fn mul(self, rhs: Sym16Vec) -> Self::Output {
+        let Sym16Vec(f1, u1, lr1) = self;
+        let Sym16Vec(f2, u2, lr2) = rhs;
+        Sym16Vec(f1 * f2, u1 * u2, lr1 * lr2)
+    }
+}
+impl Mul<Sym16> for Sym16 {
+    type Output = Sym16;
+
+    fn mul(self, rhs: Sym16) -> Self::Output {
+        let v1: Sym16Vec = self.into();
+        let v2: Sym16Vec = rhs.into();
+        (v1 * v2).into()
+    }
+}
+
 impl Mul<CubieLevel> for Sym16Vec {
     type Output = CubieLevel;
 
@@ -633,5 +680,95 @@ impl std::iter::Iterator for Sym16Iterator {
             return Some(Sym16(cur));
         }
         None
+    }
+}
+
+impl Mul<Move> for SymF {
+    type Output = Option<Move>;
+
+    fn mul(self, rhs: Move) -> Self::Output {
+        match self {
+            Self::F0 => Some(rhs), //
+            _ => {
+                let res = rhs * SOLVED;
+                let res = inner_mul(&res, self.inv().into());
+                let res = inner_mul(self.into(), &res);
+                for m in Move::iter() {
+                    if res == m * SOLVED {
+                        return Some(m);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+impl Mul<Move> for SymU {
+    type Output = Option<Move>;
+
+    fn mul(self, rhs: Move) -> Self::Output {
+        match self {
+            Self::U0 => Some(rhs), //
+            _ => {
+                let res = rhs * SOLVED;
+                let res = inner_mul(&res, self.inv().into());
+                let res = inner_mul(self.into(), &res);
+                for m in Move::iter() {
+                    if res == m * SOLVED {
+                        return Some(m);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+impl Mul<Move> for SymLR {
+    type Output = Option<Move>;
+
+    fn mul(self, rhs: Move) -> Self::Output {
+        match self {
+            Self::LR0 => Some(rhs), //
+            _ => {
+                let res = rhs * SOLVED;
+                let res = inner_mul(&res, self.inv().into());
+                let res = inner_mul(self.into(), &res);
+                for m in Move::iter() {
+                    if res == m * SOLVED {
+                        return Some(m);
+                    }
+                }
+                None
+            }
+        }
+    }
+}
+
+impl Mul<Move> for Sym16Vec {
+    type Output = Option<Move>;
+
+    fn mul(self, rhs: Move) -> Self::Output {
+        let Sym16Vec(f, u, lr) = self;
+        f * (u * (lr * rhs)?)?
+    }
+}
+
+impl Mul<Move> for Sym16 {
+    type Output = Option<Move>;
+
+    fn mul(self, rhs: Move) -> Self::Output {
+        lazy_static! {
+            static ref MEMO: [Option<Move>; SYM16_COUNT * MOVE_COUNT] = {
+                let mut res = [None; SYM16_COUNT * MOVE_COUNT];
+                for s in Sym16::iter() {
+                    for m in Move::iter() {
+                        let sv: Sym16Vec = s.into();
+                        res[s.0 as usize * MOVE_COUNT + m as usize] = sv * m;
+                    }
+                }
+                res
+            };
+        }
+        MEMO[self.0 as usize * MOVE_COUNT + rhs as usize]
     }
 }
