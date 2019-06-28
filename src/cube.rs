@@ -477,7 +477,7 @@ impl From<SymLR> for &'static CubieLevel {
     }
 }
 
-trait Inv {
+pub trait Inv {
     fn inv(self) -> Self;
 }
 
@@ -495,8 +495,8 @@ impl Mul<SymF> for SymF {
 
     fn mul(self, rhs: SymF) -> Self::Output {
         match self {
-            F0 => rhs,
-            F1 => rhs.inv(),
+            Self::F0 => rhs,
+            Self::F1 => rhs.inv(),
         }
     }
 }
@@ -550,8 +550,8 @@ impl Inv for SymLR {
     fn inv(self) -> Self {
         use SymLR::*;
         match self {
-            LR0 => LR0,
-            LR1 => LR1,
+            Self::LR0 => LR0,
+            Self::LR1 => LR1,
         }
     }
 }
@@ -560,8 +560,8 @@ impl Mul<SymLR> for SymLR {
 
     fn mul(self, rhs: SymLR) -> Self::Output {
         match self {
-            LR0 => rhs,
-            LR1 => rhs.inv(),
+            Self::LR0 => rhs,
+            Self::LR1 => rhs.inv(),
         }
     }
 }

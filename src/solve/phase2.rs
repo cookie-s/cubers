@@ -1,4 +1,5 @@
 use super::cube;
+use cube::Inv;
 use cube::{Move, Sym16, SYM16_COUNT};
 use num_traits::cast::FromPrimitive;
 use std::ops::Mul;
@@ -62,7 +63,7 @@ impl std::ops::Mul<cube::CubieLevel> for P2Move {
 impl Mul<P2Move> for Sym16 {
     type Output = P2Move;
     fn mul(self, rhs: P2Move) -> Self::Output {
-        (s * Move::from(rhs)).into()
+        (self * Move::from(rhs)).unwrap().into()
     }
 }
 
@@ -505,23 +506,19 @@ impl Phase2 {
                     queue.push_back((0u8, solved));
 
                     while let Some((dis, pc)) = queue.pop_front() {
-                        if dis > 5 {
+                        if dis > 7 {
                             break;
                         }
-                        if p2.prunetable[pc.0 as usize] < dis {
+                        if p2.prunetable[pc.coord()] < dis {
                             continue;
                         }
 
-                        for s in Sym16::iter() {
-                            let cur = s * pc;
+                        for m in P2Move::iter() {
+                            let cur = m * pc;
 
-                            for m in P2Move::iter() {
-                                let cur = (s * m) * cur;
-
-                                if p2.prunetable[cur.0 as usize] > dis + 1 {
-                                    p2.prunetable[cur.0 as usize] = dis + 1;
-                                    queue.push_back(((dis + 1), cur));
-                                }
+                            if p2.prunetable[cur.coord()] > dis + 1 {
+                                p2.prunetable[cur.coord()] = dis + 1;
+                                queue.push_back(((dis + 1), cur));
                             }
                         }
                     }
@@ -659,6 +656,12 @@ struct PruneVec {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct PruneCoord(u32); // TODO: usize
 
+impl PruneCoord {
+    fn coord(&self) -> usize {
+        self.0 as usize % (CPERMCOSET_COUNT * EPERM_COUNT)
+    }
+}
+
 impl From<PruneVec> for PruneCoord {
     fn from(src: PruneVec) -> Self {
         PruneCoord(
@@ -675,7 +678,7 @@ impl From<PruneCoord> for PruneVec {
             src.0 as usize % EPERM_COUNT,
         );
         PruneVec {
-            s: Sym16::from_u32(s).unwrap(),
+            s: Sym16(s as u8),
             coset: CPermCoset(coset as u16),
             ep: EPerm(ep as u16),
         }
@@ -684,16 +687,17 @@ impl From<PruneCoord> for PruneVec {
 impl Mul<PruneVec> for P2Move {
     type Output = PruneVec;
     fn mul(self, rhs: PruneVec) -> Self::Output {
-        // let ep = (rhs.s * self) * rhs.ep;
-        // PruneVec {
-        //     s: rhs.s * self,
-        //     coset: self * rhs.coset,
-        //     ep: self * rhs.ep,
-        // }
+        let m1 = rhs.s * self;
+        let cp: CPerm = rhs.coset.into();
+        let cp = m1 * cp;
+        let coset: CPermCoset = cp.into();
+        let rs = Sym16::iter()
+            .find(|&s| CPerm::from(coset) == s * cp)
+            .unwrap();
         PruneVec {
-            s: Sym16::iter().nth(0).unwrap(),
-            coset: CPermCoset(0),
-            ep: EPerm(0),
+            s: rhs.s * rs.inv(),
+            coset: coset,
+            ep: rs * (m1 * rhs.ep),
         }
     }
 }
@@ -722,9 +726,15 @@ impl Mul<PruneCoord> for Sym16 {
 impl From<Phase2Coord> for PruneVec {
     fn from(src: Phase2Coord) -> Self {
         let src: Phase2Vec = src.into();
+        let coset: CPermCoset = src.cp.into();
+        let rs = Sym16::iter()
+            .find(|&s| CPerm::from(coset) == s * src.cp)
+            .unwrap();
+
         PruneVec {
+            s: rs.inv(),
             coset: src.cp.into(),
-            ep: src.ep,
+            ep: rs * src.ep,
         }
     }
 }
@@ -841,7 +851,7 @@ impl super::Phase for Phase2 {
                 }
                 set.insert(nstate); // TODO: ayashii
 
-                let nlb = self.prunetable[PruneCoord::from(nstate).0 as usize];
+                let nlb = self.prunetable[PruneCoord::from(nstate).coord()];
 
                 heap.push((
                     -(dist + 1) as i8,
