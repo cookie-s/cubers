@@ -496,7 +496,10 @@ impl Mul<SymF> for SymF {
     fn mul(self, rhs: SymF) -> Self::Output {
         match self {
             Self::F0 => rhs,
-            Self::F1 => rhs.inv(),
+            Self::F1 => match rhs {
+                Self::F0 => Self::F1,
+                Self::F1 => Self::F0,
+            },
         }
     }
 }
@@ -561,7 +564,10 @@ impl Mul<SymLR> for SymLR {
     fn mul(self, rhs: SymLR) -> Self::Output {
         match self {
             Self::LR0 => rhs,
-            Self::LR1 => rhs.inv(),
+            Self::LR1 => match rhs {
+                Self::LR0 => Self::LR1,
+                Self::LR1 => Self::LR0,
+            },
         }
     }
 }
@@ -633,6 +639,13 @@ impl Mul<Sym16Vec> for Sym16Vec {
     fn mul(self, rhs: Sym16Vec) -> Self::Output {
         let Sym16Vec(f1, u1, lr1) = self;
         let Sym16Vec(f2, u2, lr2) = rhs;
+        println!(
+            "{:?}, {:?}, {:?}, {:?}",
+            self,
+            rhs,
+            Sym16Vec(f1 * f2, u1 * u2, lr1 * lr2),
+            Sym16Vec::from(Sym16(9)),
+        );
         Sym16Vec(f1 * f2, u1 * u2, lr1 * lr2)
     }
 }
