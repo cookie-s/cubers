@@ -353,8 +353,8 @@ enum SymLR { LR0, LR1 }
 struct Sym16Vec(SymF, SymU, SymLR);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct Sym16(u8);
-const SYM16_COUNT: usize = 16;
+pub struct Sym16(pub u8);
+pub const SYM16_COUNT: usize = 16;
 
 impl From<SymF> for &'static CubieLevel {
     fn from(src: SymF) -> &'static CubieLevel {
