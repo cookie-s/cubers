@@ -830,34 +830,45 @@ impl super::Phase for Phase2 {
         let src: Phase2Coord = src.into();
 
         fn cur_lowerbound(p2: &Phase2, src: Phase2Coord) -> u8 {
-            return 0;
-            // let mut heap = BinaryHeap::new();
-            // heap.push((-0, PruneCoord::from(self)));
-            // let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-            // let solved: Phase2Coord = solved.into();
-            // let goalpc = PruneCoord::from(solved);
+            let src: PruneCoord = src.into();
 
-            // loop {
-            //     let (dist, pc) = heap.pop().unwrap();
-            //     let dist = -dist;
-            //     if pc == goalpc {
-            //         return dist as u8;
-            //     }
+            let mut set = HashSet::new();
+            let mut heap = BinaryHeap::new();
+            heap.push((-0, src));
+            set.insert(src);
 
-            //     let Phase2Vec { coset: i, ep: ep } = pc.into();
+            let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
+            let solved: Phase2Coord = solved.into();
+            let goalpc = PruneCoord::from(solved);
 
-            //     for m in P2Move::iter() {
-            //         // FIXME
-            //         let npc = m * pc;
-            //         m * pc;
+            loop {
+                let (dist, pc) = heap.pop().unwrap();
+                let dist = -dist;
+                if pc == goalpc {
+                    return dist as u8;
+                }
 
-            //         let npc = j * FACT8 + nep;
-            //         if p2.prunetable[npc] == p2.prunetable[pc] - 1 {
-            //             println!("{}", p2.prunetable[npc]);
-            //             heap.push((-(dist + 1), npc));
-            //         }
-            //     }
-            // }
+                let cur: Phase2Coord = pc.into();
+
+                for s in Sym16::iter() {
+                    let cur = s * cur;
+
+                    for m in P2Move::iter() {
+                        let npc: PruneCoord = (m * cur).into();
+
+                        if set.contains(&npc) {
+                            continue;
+                        }
+
+                        if (3 + p2.prunetable.get(npc.coord()) - p2.prunetable.get(pc.coord())) % 3
+                            == 3 - 1
+                        {
+                            heap.push((-(dist + 1), npc));
+                            set.insert(npc);
+                        }
+                    }
+                }
+            }
         }
 
         let lb = cur_lowerbound(&self, src);
@@ -884,16 +895,22 @@ impl super::Phase for Phase2 {
                 if set.contains(&nstate) {
                     continue;
                 }
+
                 set.insert(nstate); // TODO: ayashii
 
-                // let nlb = self.prunetable[PruneCoord::from(nstate).coord()];
+                let nlb = match self.prunetable.get(PruneCoord::from(nstate).coord()) {
+                    i if i == (3 + lb - 1) % 3 => lb - 1,
+                    i if i == (3 + lb) % 3 => lb,
+                    i if i == (3 + lb + 1) % 3 => lb + 1,
+                    _ => unreachable!(),
+                };
 
-                // heap.push((
-                //     -(dist + 1) as i8,
-                //     nstate,
-                //     nlb,
-                //     rotates * P2MOVE_COUNT as u64 + m as u64,
-                // ));
+                heap.push((
+                    -(dist + 1) as i8,
+                    nstate,
+                    nlb,
+                    rotates * P2MOVE_COUNT as u64 + m as u64,
+                ));
             }
         }
         Err(())
