@@ -883,7 +883,7 @@ impl super::Phase for Phase2 {
                 println!("{}", dist);
                 return Ok(recover_rotates(dist as usize, rotates));
             }
-            if dist + lb as i8 > MAX_STEPS {
+            if dist + lb as i8 >= MAX_STEPS {
                 continue;
             }
             for m in P2Move::iter() {
