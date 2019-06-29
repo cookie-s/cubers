@@ -354,16 +354,6 @@ impl Mul<CPerm> for Sym16 {
         MEMO[rhs.0 as usize * SYM16_COUNT + self.0 as usize]
     }
 }
-#[test]
-fn mul_cperm_sym() {
-    use crate::cube::Inv;
-
-    for cp in CPerm::iter() {
-        for s in Sym16::iter() {
-            assert_eq!(s.inv() * (s * cp), cp);
-        }
-    }
-}
 impl Mul<EPerm> for Sym16 {
     type Output = EPerm;
     fn mul(self, rhs: EPerm) -> Self::Output {
