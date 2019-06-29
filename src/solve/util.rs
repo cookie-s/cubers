@@ -77,7 +77,7 @@ fn num2array2num_identity() {
 pub struct VecU2 {
     #[serde(with = "serde_bytes")]
     vec: Vec<u8>,
-    size: i64,
+    size: u64,
 }
 
 impl VecU2 {
@@ -88,7 +88,7 @@ impl VecU2 {
 
         VecU2 {
             vec: vec![init; (sz + 3) / 4],
-            size: sz as i64,
+            size: sz as u64,
         }
     }
 
