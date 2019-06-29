@@ -353,6 +353,14 @@ impl Mul<CPerm> for Sym16 {
         MEMO[rhs.0 as usize * SYM16_COUNT + self.0 as usize]
     }
 }
+#[test]
+fn mul_cperm_sym() {
+    for cp in CPerm::iter() {
+        for s in Sym16::iter() {
+            assert_eq!(s.inv() * (s * cp), cp);
+        }
+    }
+}
 impl Mul<EPerm> for Sym16 {
     type Output = EPerm;
     fn mul(self, rhs: EPerm) -> Self::Output {
@@ -650,7 +658,6 @@ impl Mul<Phase2Coord> for Sym16 {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct PruneVec {
-    s: Sym16,
     coset: CPermCoset,
     ep: EPerm,
 }
@@ -660,27 +667,19 @@ struct PruneCoord(u32); // TODO: usize
 
 impl PruneCoord {
     fn coord(&self) -> usize {
-        self.0 as usize % (CPERMCOSET_COUNT * EPERM_COUNT)
+        self.0 as usize
     }
 }
 
 impl From<PruneVec> for PruneCoord {
     fn from(src: PruneVec) -> Self {
-        PruneCoord(
-            ((src.s.0 as usize * CPERMCOSET_COUNT + src.coset.0 as usize) * EPERM_COUNT
-                + src.ep.0 as usize) as u32,
-        )
+        PruneCoord((src.coset.0 as usize * EPERM_COUNT + src.ep.0 as usize) as u32)
     }
 }
 impl From<PruneCoord> for PruneVec {
     fn from(src: PruneCoord) -> Self {
-        let (s, coset, ep) = (
-            src.0 as usize / EPERM_COUNT / CPERMCOSET_COUNT,
-            src.0 as usize / EPERM_COUNT % CPERMCOSET_COUNT,
-            src.0 as usize % EPERM_COUNT,
-        );
+        let (coset, ep) = (src.0 as usize / EPERM_COUNT, src.0 as usize % EPERM_COUNT);
         PruneVec {
-            s: Sym16(s as u8),
             coset: CPermCoset(coset as u16),
             ep: EPerm(ep as u16),
         }
@@ -689,43 +688,15 @@ impl From<PruneCoord> for PruneVec {
 impl Mul<PruneVec> for P2Move {
     type Output = PruneVec;
     fn mul(self, rhs: PruneVec) -> Self::Output {
-        let sj = rhs.s;
-        let rjcp = sj * CPerm::from(rhs.coset);
-        let rjep = sj * rhs.ep;
-
-        let ricp = self * rjcp;
-        let riep = self * rjep;
-        let ricoset = CPermCoset::from(ricp);
-        let si = Sym16::iter()
-            .find(|&s| s * CPerm::from(ricoset) == ricp)
+        let cp = self * CPerm::from(rhs.coset);
+        let coset: CPermCoset = cp.into();
+        let s = Sym16::iter()
+            .find(|&s| s * cp == CPerm::from(coset))
             .unwrap();
 
         PruneVec {
-            s: si,
-            coset: ricoset,
-            ep: si.inv() * riep,
-        }
-    }
-}
-#[test]
-fn move_prune() {
-    let cube = P2Move::U1 * (P2Move::F2 * (P2Move::U3 * (P2Move::D1 * cube::SOLVED)));
-    for s in Sym16::iter() {
-        for m in P2Move::iter() {
-            let c1: cube::CubieLevel = s * (m * cube);
-            let c1: PruneVec = Phase2Coord::from(Phase2Cube::try_from(c1).unwrap()).into();
-
-            let c2: PruneVec = Phase2Coord::from(Phase2Cube::try_from(s * cube).unwrap()).into();
-            let c2 = m * c2;
-
-            println!("{:?}", m);
-            assert_eq!(
-                (c1.coset, c1.s * c1.ep),
-                (c2.coset, c2.s * c2.ep),
-                "{:?} {:?}",
-                s,
-                m
-            );
+            coset: coset,
+            ep: s * (self * rhs.ep),
         }
     }
 }
@@ -740,7 +711,6 @@ impl Mul<PruneVec> for Sym16 {
     type Output = PruneVec;
     fn mul(self, rhs: PruneVec) -> Self::Output {
         PruneVec {
-            s: self * rhs.s,
             coset: rhs.coset,
             ep: rhs.ep,
         }
@@ -756,17 +726,17 @@ impl From<Phase2Coord> for PruneVec {
     fn from(src: Phase2Coord) -> Self {
         let src: Phase2Vec = src.into();
         let coset: CPermCoset = src.cp.into();
-        let rs = Sym16::iter()
+        let s = Sym16::iter()
             .find(|&s| CPerm::from(coset) == s * src.cp)
             .unwrap();
 
         PruneVec {
-            s: rs.inv(),
             coset: coset,
-            ep: rs * src.ep,
+            ep: s * src.ep,
         }
     }
 }
+
 #[test]
 fn prune_mul_sym() {
     let cube = P2Move::U1 * (P2Move::F2 * (P2Move::U3 * (P2Move::D1 * cube::SOLVED)));
@@ -777,14 +747,33 @@ fn prune_mul_sym() {
         let c2: PruneVec = Phase2Coord::from(Phase2Cube::try_from(cube).unwrap()).into();
         let c2 = s * c2;
 
-        assert_eq!(
-            (c1.coset, c1.s * c1.ep),
-            (c2.coset, c2.s * c2.ep),
+        println!(
             "{:?}",
-            s,
-        )
+            PruneVec::from(Phase2Coord::from(Phase2Cube::try_from(s * cube).unwrap()))
+        );
+        assert_eq!(c1, c2, "{:?}", s);
     }
 }
+
+#[test]
+fn sym_move_one() {
+    use P2Move::*;
+
+    let solved = PruneVec::from(Phase2Coord::from(
+        Phase2Cube::try_from(cube::SOLVED).unwrap(),
+    ));
+
+    for &m in &[U1, U3, D1, D3] {
+        assert_eq!(m * solved, U1 * solved, "{:?}", m);
+    }
+    for &m in &[U2, D2] {
+        assert_eq!(m * solved, U2 * solved, "{:?}", m);
+    }
+    for &m in &[F2, B2, L2, R2] {
+        assert_eq!(m * solved, F2 * solved, "{:?}", m);
+    }
+}
+
 impl From<Phase2Coord> for PruneCoord {
     fn from(src: Phase2Coord) -> Self {
         PruneVec::from(src).into()

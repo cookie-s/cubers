@@ -585,6 +585,14 @@ impl Mul<CubieLevel> for SymLR {
     }
 }
 
+impl From<Sym16> for CubieLevel {
+    fn from(src: Sym16) -> Self {
+        let Sym16Vec(f, u, lr) = src.into();
+        let res = inner_mul(u.into(), lr.into());
+        inner_mul(f.into(), &res)
+    }
+}
+
 impl From<Sym16Vec> for Sym16 {
     fn from(src: Sym16Vec) -> Self {
         let Sym16Vec(f, u, lr) = src;
@@ -621,15 +629,41 @@ impl Inv for Sym16 {
     fn inv(self) -> Self {
         lazy_static! {
             static ref MEMO: [Sym16; SYM16_COUNT] = {
-                let mut res = [Sym16(0); SYM16_COUNT];
-                for (i, e) in res.iter_mut().enumerate() {
-                    let v: Sym16Vec = Sym16(i as u8).into();
-                    *e = v.inv().into();
+                let mut memo = [Sym16(!0); SYM16_COUNT];
+
+                for (i, s) in Sym16::iter().enumerate() {
+                    let s: CubieLevel = s.into();
+                    memo[i] = Sym16::iter()
+                        .find(|&t| {
+                            let t: CubieLevel = t.into();
+                            inner_mul(&t, &s) == SOLVED
+                        })
+                        .unwrap();
                 }
-                res
+                memo
             };
         }
         MEMO[self.0 as usize]
+    }
+}
+
+#[test]
+fn inv_sym16() {
+    for s in Sym16::iter() {
+        assert_eq!(s * s.inv(), Sym16(0))
+    }
+}
+
+#[test]
+fn sym16() {
+    // TODO These must be P2Move
+    let cube = Move::U1 * (Move::F2 * (Move::U3 * (Move::D1 * SOLVED)));
+
+    for s in Sym16::iter() {
+        let c1 = s * cube;
+        let c2 = s.inv() * c1;
+
+        assert_eq!(crate::RubikCube(cube), crate::RubikCube(c2));
     }
 }
 
@@ -637,25 +671,54 @@ impl Mul<Sym16Vec> for Sym16Vec {
     type Output = Sym16Vec;
 
     fn mul(self, rhs: Sym16Vec) -> Self::Output {
-        let Sym16Vec(f1, u1, lr1) = self;
-        let Sym16Vec(f2, u2, lr2) = rhs;
-        println!(
-            "{:?}, {:?}, {:?}, {:?}",
-            self,
-            rhs,
-            Sym16Vec(f1 * f2, u1 * u2, lr1 * lr2),
-            Sym16Vec::from(Sym16(9)),
-        );
-        Sym16Vec(f1 * f2, u1 * u2, lr1 * lr2)
+        (Sym16Vec::from(self) * Sym16Vec::from(rhs)).into()
     }
 }
 impl Mul<Sym16> for Sym16 {
     type Output = Sym16;
 
     fn mul(self, rhs: Sym16) -> Self::Output {
-        let v1: Sym16Vec = self.into();
-        let v2: Sym16Vec = rhs.into();
-        (v1 * v2).into()
+        lazy_static! {
+            static ref MEMO: [Sym16; SYM16_COUNT * SYM16_COUNT] = {
+                let mut memo = [Sym16(!0); SYM16_COUNT * SYM16_COUNT];
+
+                for s1 in Sym16::iter() {
+                    let r1: CubieLevel = s1.into();
+
+                    for s2 in Sym16::iter() {
+                        let r2: CubieLevel = s2.into();
+                        let r2 = inner_mul(&r2, &r1);
+
+                        memo[s2.0 as usize * SYM16_COUNT + s1.0 as usize] = Sym16::iter()
+                            .find(|&s| {
+                                let r3: CubieLevel = s.into();
+
+                                r2 == r3
+                            })
+                            .unwrap();
+                    }
+                }
+                memo
+            };
+        }
+        MEMO[self.0 as usize * SYM16_COUNT + rhs.0 as usize]
+    }
+}
+#[test]
+fn mul_sym() {
+    // must be P2Move
+    let cube = Move::U1 * (Move::F2 * (Move::U3 * (Move::D1 * SOLVED)));
+
+    for s1 in Sym16::iter() {
+        for s2 in Sym16::iter() {
+            assert_eq!(
+                crate::RubikCube(s1 * (s2 * cube)),
+                crate::RubikCube((s1 * s2) * cube),
+                "{:?} {:?}",
+                Sym16Vec::from(s1),
+                Sym16Vec::from(s2),
+            );
+        }
     }
 }
 
