@@ -512,18 +512,22 @@ impl Phase2 {
                     let solved: PruneCoord = solved.into();
 
                     queue.push_back((0u8, solved));
+                    p2.prunetable[solved.coord()] = 0;
 
                     while let Some((dis, pc)) = queue.pop_front() {
-                        if dis > 7 {
+                        if dis > 10 {
                             break;
                         }
 
-                        let cur = pc;
+                        let cur: Phase2Coord = pc.into();
+
                         for s in Sym16::iter() {
                             let cur = s * cur;
 
                             for m in P2Move::iter() {
                                 let cur = m * cur;
+
+                                let cur: PruneCoord = cur.into();
 
                                 if p2.prunetable[cur.coord()] > dis + 1 {
                                     p2.prunetable[cur.coord()] = dis + 1;
@@ -707,21 +711,6 @@ impl Mul<PruneCoord> for P2Move {
         (self * PruneVec::from(rhs)).into()
     }
 }
-impl Mul<PruneVec> for Sym16 {
-    type Output = PruneVec;
-    fn mul(self, rhs: PruneVec) -> Self::Output {
-        PruneVec {
-            coset: rhs.coset,
-            ep: rhs.ep,
-        }
-    }
-}
-impl Mul<PruneCoord> for Sym16 {
-    type Output = PruneCoord;
-    fn mul(self, rhs: PruneCoord) -> Self::Output {
-        (self * PruneVec::from(rhs)).into()
-    }
-}
 impl From<Phase2Coord> for PruneVec {
     fn from(src: Phase2Coord) -> Self {
         let src: Phase2Vec = src.into();
@@ -736,22 +725,16 @@ impl From<Phase2Coord> for PruneVec {
         }
     }
 }
-
-#[test]
-fn prune_mul_sym() {
-    let cube = P2Move::U1 * (P2Move::F2 * (P2Move::U3 * (P2Move::D1 * cube::SOLVED)));
-
-    for s in Sym16::iter() {
-        let c1: PruneVec = Phase2Coord::from(Phase2Cube::try_from(s * cube).unwrap()).into();
-
-        let c2: PruneVec = Phase2Coord::from(Phase2Cube::try_from(cube).unwrap()).into();
-        let c2 = s * c2;
-
-        println!(
-            "{:?}",
-            PruneVec::from(Phase2Coord::from(Phase2Cube::try_from(s * cube).unwrap()))
-        );
-        assert_eq!(c1, c2, "{:?}", s);
+impl From<PruneCoord> for Phase2Coord {
+    // representation
+    fn from(src: PruneCoord) -> Self {
+        let src: PruneVec = src.into();
+        Phase2Vec {
+            cp: src.coset.into(),
+            ep: src.ep.into(),
+            uds: UDSlice(0),
+        }
+        .into()
     }
 }
 
