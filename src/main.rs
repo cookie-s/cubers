@@ -24,8 +24,8 @@ fn main() {
         .map(|file| cubers::solve::phase2::Phase2::new_from_cache(file).unwrap())
         .unwrap_or_else(|_| {
             let res = cubers::solve::phase2::Phase2::new();
-            let mut file = std::io::BufWriter::new(std::fs::File::create("phase2.db").unwrap());
-            bincode::serialize_into(file, &res);
+            let file = std::io::BufWriter::new(std::fs::File::create("phase2.db").unwrap());
+            let _ = bincode::serialize_into(file, &res);
             res
         });
 

@@ -356,6 +356,8 @@ impl Mul<CPerm> for Sym16 {
 }
 #[test]
 fn mul_cperm_sym() {
+    use crate::cube::Inv;
+
     for cp in CPerm::iter() {
         for s in Sym16::iter() {
             assert_eq!(s.inv() * (s * cp), cp);
@@ -540,9 +542,6 @@ impl Phase2 {
                 if v == !0 {
                     continue;
                 }
-                if v >= 25 {
-                    continue;
-                }
                 t[v as usize] += 1;
             }
             println!("{:?}", t);
@@ -557,8 +556,6 @@ impl Phase2 {
                 p2.prunetable.set(i, v as u8 % 3);
             }
         }
-
-        println!("init done");
 
         p2
     }
@@ -782,7 +779,6 @@ impl From<Phase2Coord> for PruneCoord {
 #[test]
 fn rotate_test() {
     use super::*;
-    let p2 = Phase2::new();
 
     let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
     let solved: Phase2Coord = solved.into();
@@ -896,7 +892,7 @@ impl super::Phase for Phase2 {
                     continue;
                 }
 
-                set.insert(nstate); // TODO: ayashii
+                set.insert(nstate);
 
                 let nlb = match self.prunetable.get(PruneCoord::from(nstate).coord()) {
                     i if i == (3 + lb - 1) % 3 => lb - 1,
