@@ -811,9 +811,9 @@ impl super::Phase for Phase2 {
             let mut res = vec![Move::U1; dist];
 
             for i in 0..dist {
-                let p2move = P2Move::from_usize(rotates as usize % 10).unwrap();
+                let p2move = P2Move::from_usize(rotates as usize % P2MOVE_COUNT).unwrap();
                 res[dist - 1 - i] = p2move.into();
-                rotates /= 10;
+                rotates /= P2MOVE_COUNT as u64;
             }
             res
         }
@@ -886,6 +886,7 @@ impl super::Phase for Phase2 {
             if dist + lb as i8 >= MAX_STEPS {
                 continue;
             }
+
             for m in P2Move::iter() {
                 let nstate = m * state;
                 if set.contains(&nstate) {

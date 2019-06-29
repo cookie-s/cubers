@@ -68,31 +68,37 @@ pub enum Move {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct CubieLevel(pub [CornerCube; 8], pub [EdgeCube; 12]);
 
-fn inner_mul(lhs: &CubieLevel, rhs: &CubieLevel) -> CubieLevel {
-    let mut res = CubieLevel(
-        [CornerCube {
-            c: CornerCubePos::UBR,
-            o: 0,
-        }; 8],
-        [EdgeCube {
-            e: EdgeCubePos::UR,
-            o: 0,
-        }; 12],
-    );
+impl<'a> Mul<&'a CubieLevel> for &'a CubieLevel {
+    type Output = CubieLevel;
 
-    for i in 0..8 {
-        res.0[i] = rhs.0[lhs.0[i].c as usize];
-        res.0[i].o += lhs.0[i].o;
-        res.0[i].o %= 3;
+    fn mul(self, rhs: Self) -> Self::Output {
+        let lhs = self;
+
+        let mut res = CubieLevel(
+            [CornerCube {
+                c: CornerCubePos::UBR,
+                o: 0,
+            }; 8],
+            [EdgeCube {
+                e: EdgeCubePos::UR,
+                o: 0,
+            }; 12],
+        );
+
+        for i in 0..8 {
+            res.0[i] = rhs.0[lhs.0[i].c as usize];
+            res.0[i].o += lhs.0[i].o;
+            res.0[i].o %= 3;
+        }
+
+        for i in 0..12 {
+            res.1[i] = rhs.1[lhs.1[i].e as usize];
+            res.1[i].o += lhs.1[i].o;
+            res.1[i].o %= 2;
+        }
+
+        res
     }
-
-    for i in 0..12 {
-        res.1[i] = rhs.1[lhs.1[i].e as usize];
-        res.1[i].o += lhs.1[i].o;
-        res.1[i].o %= 2;
-    }
-
-    res
 }
 
 impl Mul<CubieLevel> for Move {
@@ -263,18 +269,18 @@ impl Mul<CubieLevel> for Move {
             );
 
             lazy_static! {
-                static ref U2_CUBE: CubieLevel = inner_mul(&U1_CUBE, &U1_CUBE);
-                static ref U3_CUBE: CubieLevel = inner_mul(&U1_CUBE, &U2_CUBE);
-                static ref R2_CUBE: CubieLevel = inner_mul(&R1_CUBE, &R1_CUBE);
-                static ref R3_CUBE: CubieLevel = inner_mul(&R1_CUBE, &R2_CUBE);
-                static ref F2_CUBE: CubieLevel = inner_mul(&F1_CUBE, &F1_CUBE);
-                static ref F3_CUBE: CubieLevel = inner_mul(&F1_CUBE, &F2_CUBE);
-                static ref D2_CUBE: CubieLevel = inner_mul(&D1_CUBE, &D1_CUBE);
-                static ref D3_CUBE: CubieLevel = inner_mul(&D1_CUBE, &D2_CUBE);
-                static ref L2_CUBE: CubieLevel = inner_mul(&L1_CUBE, &L1_CUBE);
-                static ref L3_CUBE: CubieLevel = inner_mul(&L1_CUBE, &L2_CUBE);
-                static ref B2_CUBE: CubieLevel = inner_mul(&B1_CUBE, &B1_CUBE);
-                static ref B3_CUBE: CubieLevel = inner_mul(&B1_CUBE, &B2_CUBE);
+                static ref U2_CUBE: CubieLevel = &U1_CUBE * &U1_CUBE;
+                static ref U3_CUBE: CubieLevel = &U1_CUBE * &U2_CUBE;
+                static ref R2_CUBE: CubieLevel = &R1_CUBE * &R1_CUBE;
+                static ref R3_CUBE: CubieLevel = &R1_CUBE * &R2_CUBE;
+                static ref F2_CUBE: CubieLevel = &F1_CUBE * &F1_CUBE;
+                static ref F3_CUBE: CubieLevel = &F1_CUBE * &F2_CUBE;
+                static ref D2_CUBE: CubieLevel = &D1_CUBE * &D1_CUBE;
+                static ref D3_CUBE: CubieLevel = &D1_CUBE * &D2_CUBE;
+                static ref L2_CUBE: CubieLevel = &L1_CUBE * &L1_CUBE;
+                static ref L3_CUBE: CubieLevel = &L1_CUBE * &L2_CUBE;
+                static ref B2_CUBE: CubieLevel = &B1_CUBE * &B1_CUBE;
+                static ref B3_CUBE: CubieLevel = &B1_CUBE * &B2_CUBE;
             };
 
             match m {
@@ -304,9 +310,7 @@ impl Mul<CubieLevel> for Move {
             }
         }
 
-        let lhs = subst(self);
-
-        inner_mul(lhs, &rhs)
+        subst(self) * &rhs
     }
 }
 
@@ -352,9 +356,15 @@ enum SymLR { LR0, LR1 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 struct Sym16Vec(SymF, SymU, SymLR);
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Sym16(pub u8);
 pub const SYM16_COUNT: usize = 16;
+
+impl std::fmt::Debug for Sym16 {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        Sym16Vec::fmt(&Sym16Vec::from(*self), f)
+    }
+}
 
 impl From<SymF> for &'static CubieLevel {
     fn from(src: SymF) -> &'static CubieLevel {
@@ -426,8 +436,8 @@ impl From<SymU> for &'static CubieLevel {
             ],
         );
         lazy_static! {
-            static ref U2_CUBE: CubieLevel = inner_mul(&U1_CUBE, &U1_CUBE);
-            static ref U3_CUBE: CubieLevel = inner_mul(&U1_CUBE, &U2_CUBE);
+            static ref U2_CUBE: CubieLevel = &U1_CUBE * &U1_CUBE;
+            static ref U3_CUBE: CubieLevel = &U1_CUBE * &U2_CUBE;
         };
 
         match src {
@@ -510,8 +520,8 @@ impl Mul<CubieLevel> for SymF {
         match self {
             Self::F0 => rhs, //
             _ => {
-                let res = inner_mul(&rhs, self.into());
-                inner_mul(self.inv().into(), &res)
+                let res = &rhs * <&CubieLevel>::from(self);
+                <&CubieLevel>::from(self.inv()) * &res
             }
         }
     }
@@ -542,8 +552,8 @@ impl Mul<CubieLevel> for SymU {
         match self {
             Self::U0 => rhs,
             _ => {
-                let res = inner_mul(&rhs, self.into());
-                inner_mul(self.inv().into(), &res)
+                let res = &rhs * <&CubieLevel>::from(self);
+                <&CubieLevel>::from(self.inv()) * &res
             }
         }
     }
@@ -578,8 +588,8 @@ impl Mul<CubieLevel> for SymLR {
         match self {
             Self::LR0 => rhs,
             _ => {
-                let res = inner_mul(&rhs, self.into());
-                inner_mul(self.inv().into(), &res)
+                let res = &rhs * <&CubieLevel>::from(self);
+                <&CubieLevel>::from(self.inv()) * &res
             }
         }
     }
@@ -588,8 +598,8 @@ impl Mul<CubieLevel> for SymLR {
 impl From<Sym16> for CubieLevel {
     fn from(src: Sym16) -> Self {
         let Sym16Vec(f, u, lr) = src.into();
-        let res = inner_mul(u.into(), lr.into());
-        inner_mul(f.into(), &res)
+        let res = <&CubieLevel>::from(u) * <&CubieLevel>::from(lr);
+        <&CubieLevel>::from(f) * &res
     }
 }
 
@@ -636,7 +646,7 @@ impl Inv for Sym16 {
                     memo[i] = Sym16::iter()
                         .find(|&t| {
                             let t: CubieLevel = t.into();
-                            inner_mul(&t, &s) == SOLVED
+                            &t * &s == SOLVED
                         })
                         .unwrap();
                 }
@@ -688,7 +698,7 @@ impl Mul<Sym16> for Sym16 {
 
                     for s2 in Sym16::iter() {
                         let r2: CubieLevel = s2.into();
-                        let r2 = inner_mul(&r2, &r1);
+                        let r2 = &r2 * &r1;
 
                         memo[s2.0 as usize * SYM16_COUNT + s1.0 as usize] = Sym16::iter()
                             .find(|&s| {
@@ -768,8 +778,8 @@ impl Mul<Move> for SymF {
             Self::F0 => Some(rhs), //
             _ => {
                 let res = rhs * SOLVED;
-                let res = inner_mul(&res, self.inv().into());
-                let res = inner_mul(self.into(), &res);
+                let res = &res * <&CubieLevel>::from(self.inv());
+                let res = <&CubieLevel>::from(self) * &res;
                 for m in Move::iter() {
                     if res == m * SOLVED {
                         return Some(m);
@@ -788,8 +798,8 @@ impl Mul<Move> for SymU {
             Self::U0 => Some(rhs), //
             _ => {
                 let res = rhs * SOLVED;
-                let res = inner_mul(&res, self.inv().into());
-                let res = inner_mul(self.into(), &res);
+                let res = &res * <&CubieLevel>::from(self.inv());
+                let res = <&CubieLevel>::from(self) * &res;
                 for m in Move::iter() {
                     if res == m * SOLVED {
                         return Some(m);
@@ -808,8 +818,8 @@ impl Mul<Move> for SymLR {
             Self::LR0 => Some(rhs), //
             _ => {
                 let res = rhs * SOLVED;
-                let res = inner_mul(&res, self.inv().into());
-                let res = inner_mul(self.into(), &res);
+                let res = &res * <&CubieLevel>::from(self.inv());
+                let res = <&CubieLevel>::from(self) * &res;
                 for m in Move::iter() {
                     if res == m * SOLVED {
                         return Some(m);
