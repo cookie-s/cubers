@@ -410,8 +410,8 @@ const CPERMCOSET_COUNT: usize = 2768;
 impl From<CPerm> for CPermCoset {
     fn from(src: CPerm) -> CPermCoset {
         lazy_static! {
-            static ref MEMO: [CPermCoset; FACT8] = {
-                let mut memo = [CPermCoset(!0); FACT8];
+            static ref MEMO: Vec<CPermCoset> = {
+                let mut memo = vec![CPermCoset(!0); FACT8];
                 let mut cnt = 0;
 
                 for i in 0..FACT8 {
@@ -447,8 +447,8 @@ impl From<CPermCoset> for CPerm {
 
     fn from(src: CPermCoset) -> CPerm {
         lazy_static! {
-            static ref MEMO: [CPerm; CPERMCOSET_COUNT] = {
-                let mut memo = [CPerm(!0); CPERMCOSET_COUNT];
+            static ref MEMO: Vec<CPerm> = {
+                let mut memo = vec![CPerm(!0); CPERMCOSET_COUNT];
 
                 for i in 0..FACT8 {
                     let cp = CPerm(i as u16);
@@ -468,8 +468,8 @@ impl Mul<CPermCoset> for P2Move {
 
     fn mul(self, rhs: CPermCoset) -> Self::Output {
         lazy_static! {
-            static ref MEMO: [CPermCoset; CPERMCOSET_COUNT * P2MOVE_COUNT] = {
-                let mut memo = [CPermCoset(!0); CPERMCOSET_COUNT * P2MOVE_COUNT];
+            static ref MEMO: Vec<CPermCoset> = {
+                let mut memo = vec![CPermCoset(!0); CPERMCOSET_COUNT * P2MOVE_COUNT];
                 for i in 0..CPERMCOSET_COUNT {
                     let cp: CPerm = CPermCoset(i as u16).into();
 

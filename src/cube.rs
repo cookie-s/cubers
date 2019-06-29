@@ -628,8 +628,8 @@ impl Inv for Sym16Vec {
 impl Inv for Sym16 {
     fn inv(self) -> Self {
         lazy_static! {
-            static ref MEMO: [Sym16; SYM16_COUNT] = {
-                let mut memo = [Sym16(!0); SYM16_COUNT];
+            static ref MEMO: Vec<Sym16> = {
+                let mut memo = vec![Sym16(!0); SYM16_COUNT];
 
                 for (i, s) in Sym16::iter().enumerate() {
                     let s: CubieLevel = s.into();
@@ -680,8 +680,8 @@ impl Mul<Sym16> for Sym16 {
 
     fn mul(self, rhs: Sym16) -> Self::Output {
         lazy_static! {
-            static ref MEMO: [Sym16; SYM16_COUNT * SYM16_COUNT] = {
-                let mut memo = [Sym16(!0); SYM16_COUNT * SYM16_COUNT];
+            static ref MEMO: Vec<Sym16> = {
+                let mut memo = vec![Sym16(!0); SYM16_COUNT * SYM16_COUNT];
 
                 for s1 in Sym16::iter() {
                     let r1: CubieLevel = s1.into();
@@ -835,8 +835,8 @@ impl Mul<Move> for Sym16 {
 
     fn mul(self, rhs: Move) -> Self::Output {
         lazy_static! {
-            static ref MEMO: [Option<Move>; SYM16_COUNT * MOVE_COUNT] = {
-                let mut res = [None; SYM16_COUNT * MOVE_COUNT];
+            static ref MEMO: Vec<Option<Move>> = {
+                let mut res = vec![None; SYM16_COUNT * MOVE_COUNT];
                 for s in Sym16::iter() {
                     for m in Move::iter() {
                         let sv: Sym16Vec = s.into();
