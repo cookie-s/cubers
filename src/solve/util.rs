@@ -73,9 +73,11 @@ fn num2array2num_identity() {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct VecU2 {
+    #[serde(with = "serde_bytes")]
     vec: Vec<u8>,
-    size: usize,
+    size: i64,
 }
 
 impl VecU2 {
@@ -86,19 +88,19 @@ impl VecU2 {
 
         VecU2 {
             vec: vec![init; (sz + 3) / 4],
-            size: sz,
+            size: sz as i64,
         }
     }
 
     pub fn get(&self, idx: usize) -> u8 {
-        assert!(idx < self.size);
+        assert!(idx < self.size as usize);
 
         let (u8idx, u2idx) = (idx / 4, idx % 4);
         ((self.vec[u8idx] >> (u2idx * 2)) & 0x3) as u8
     }
 
     pub fn set(&mut self, idx: usize, val: u8) {
-        assert!(idx < self.size);
+        assert!(idx < self.size as usize);
 
         let (u8idx, u2idx) = (idx / 4, idx % 4);
         self.vec[u8idx] &= !(0x3 << (u2idx * 2));

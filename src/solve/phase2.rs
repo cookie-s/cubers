@@ -1,5 +1,5 @@
 use super::cube;
-use cube::Inv;
+use crate::solve::util::VecU2;
 use cube::{Move, Sym16, SYM16_COUNT};
 use num_traits::cast::FromPrimitive;
 use std::ops::Mul;
@@ -272,8 +272,9 @@ fn udslice() {
     }
 }
 
+#[derive(Deserialize, Serialize)]
 pub struct Phase2 {
-    prunetable: Vec<u8>, // 2768 * FACT8
+    prunetable: VecU2, // 2768 * FACT8
 }
 
 impl Mul<CPerm> for P2Move {
@@ -483,82 +484,83 @@ impl Mul<CPermCoset> for P2Move {
     }
 }
 
-impl CPermCoset {
-    fn index(self, cp: CPerm) -> Option<Sym16> {
-        let src: CPerm = self.into();
-        Sym16::iter().find(|&s| s * src == cp)
-    }
-}
-
 impl Phase2 {
-    pub fn new() -> &'static Self {
-        lazy_static! {
-            static ref P2: Phase2 = {
-                let mut p2 = Phase2 {
-                    prunetable: vec![!0; 2768 * FACT8],
-                };
+    pub fn new_from_cache<R>(src: R) -> bincode::Result<Self>
+    where
+        R: std::io::Read,
+    {
+        bincode::deserialize_from(src)
+    }
 
-                for m in P2Move::iter() {
-                    let cp: CPerm = (m * cube::SOLVED).into();
-                    let ep: EPerm = (m * cube::SOLVED).into();
-                    println!("{:?} {:?} {:?} {:?}", m, cp, CPermCoset::from(cp), ep);
+    pub fn new() -> Self {
+        let mut table = vec![!0u8; CPERMCOSET_COUNT * EPERM_COUNT];
+        {
+            let mut queue = std::collections::VecDeque::with_capacity(37144996);
+
+            let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
+            let solved: Phase2Coord = solved.into();
+            let solved: PruneCoord = solved.into();
+
+            queue.push_back(solved);
+            table[solved.coord()] = 0;
+
+            while let Some(pc) = queue.pop_front() {
+                let dis = table[pc.coord()];
+
+                if dis >= 18 {
+                    break;
                 }
 
-                {
-                    let mut queue = std::collections::VecDeque::new();
+                let cur: Phase2Coord = pc.into();
 
-                    let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-                    let solved: Phase2Coord = solved.into();
-                    let solved: PruneCoord = solved.into();
+                for s in Sym16::iter() {
+                    let cur = s * cur;
 
-                    queue.push_back((0u8, solved));
-                    p2.prunetable[solved.coord()] = 0;
-
-                    while let Some((dis, pc)) = queue.pop_front() {
-                        if dis > 10 {
-                            break;
-                        }
-
-                        let cur: Phase2Coord = pc.into();
-
-                        for s in Sym16::iter() {
-                            let cur = s * cur;
-
-                            for m in P2Move::iter() {
-                                let cur = m * cur;
-
-                                let cur: PruneCoord = cur.into();
-
-                                if p2.prunetable[cur.coord()] > dis + 1 {
-                                    p2.prunetable[cur.coord()] = dis + 1;
-                                    queue.push_back((dis + 1, cur));
-                                }
-                            }
-                        }
+                    let t: PruneCoord = cur.into();
+                    if table[t.coord()] < dis {
+                        continue;
                     }
 
-                    let mut t = [0; 25];
-                    let mut sum = 0;
-                    for &v in p2.prunetable.iter() {
-                        if v == !0 {
-                            continue;
+                    for m in P2Move::iter() {
+                        let cur = m * cur;
+
+                        let t: PruneCoord = cur.into();
+                        let coord = t.coord();
+
+                        if table[coord] > dis + 1 {
+                            table[coord] = dis + 1;
+                            queue.push_back(t);
                         }
-                        sum += 1;
-                        if v >= 25 {
-                            continue;
-                        }
-                        t[v as usize] += 1;
                     }
-                    println!("{:?} {}", t, sum);
                 }
+            }
 
-                println!("init done");
-                panic!();
-                p2
-            };
+            let mut t = [0; 18 + 1];
+            for &v in table.iter() {
+                if v == !0 {
+                    continue;
+                }
+                if v >= 25 {
+                    continue;
+                }
+                t[v as usize] += 1;
+            }
+            println!("{:?}", t);
+        }
+
+        let mut p2 = Phase2 {
+            prunetable: VecU2::new(3, CPERMCOSET_COUNT * EPERM_COUNT),
         };
 
-        &P2
+        for (i, &v) in table.iter().enumerate() {
+            if v != !0 {
+                p2.prunetable.set(i, v as u8 % 3);
+            }
+        }
+
+        println!("init done");
+
+        p2
     }
 }
 
@@ -667,7 +669,7 @@ struct PruneVec {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct PruneCoord(u32); // TODO: usize
+struct PruneCoord(u32);
 
 impl PruneCoord {
     fn coord(&self) -> usize {
@@ -694,9 +696,7 @@ impl Mul<PruneVec> for P2Move {
     fn mul(self, rhs: PruneVec) -> Self::Output {
         let cp = self * CPerm::from(rhs.coset);
         let coset: CPermCoset = cp.into();
-        let s = Sym16::iter()
-            .find(|&s| s * cp == CPerm::from(coset))
-            .unwrap();
+        let s = Sym16::from(cp);
 
         PruneVec {
             coset: coset,
@@ -711,13 +711,29 @@ impl Mul<PruneCoord> for P2Move {
         (self * PruneVec::from(rhs)).into()
     }
 }
+
+impl From<CPerm> for Sym16 {
+    //FIXME
+    fn from(src: CPerm) -> Self {
+        lazy_static! {
+            static ref MEMO: Vec<Sym16> = {
+                let mut memo = vec![Sym16(!0); CPERM_COUNT];
+                for cp in CPerm::iter() {
+                    let coset = CPerm::from(CPermCoset::from(cp));
+                    memo[cp.0 as usize] = Sym16::iter().find(|&s| coset == s * cp).unwrap();
+                }
+                memo
+            };
+        }
+        MEMO[src.0 as usize]
+    }
+}
+
 impl From<Phase2Coord> for PruneVec {
     fn from(src: Phase2Coord) -> Self {
         let src: Phase2Vec = src.into();
         let coset: CPermCoset = src.cp.into();
-        let s = Sym16::iter()
-            .find(|&s| CPerm::from(coset) == s * src.cp)
-            .unwrap();
+        let s = Sym16::from(src.cp);
 
         PruneVec {
             coset: coset,
@@ -870,14 +886,14 @@ impl super::Phase for Phase2 {
                 }
                 set.insert(nstate); // TODO: ayashii
 
-                let nlb = self.prunetable[PruneCoord::from(nstate).coord()];
+                // let nlb = self.prunetable[PruneCoord::from(nstate).coord()];
 
-                heap.push((
-                    -(dist + 1) as i8,
-                    nstate,
-                    nlb,
-                    rotates * P2MOVE_COUNT as u64 + m as u64,
-                ));
+                // heap.push((
+                //     -(dist + 1) as i8,
+                //     nstate,
+                //     nlb,
+                //     rotates * P2MOVE_COUNT as u64 + m as u64,
+                // ));
             }
         }
         Err(())

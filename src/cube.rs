@@ -671,9 +671,10 @@ impl Mul<Sym16Vec> for Sym16Vec {
     type Output = Sym16Vec;
 
     fn mul(self, rhs: Sym16Vec) -> Self::Output {
-        (Sym16Vec::from(self) * Sym16Vec::from(rhs)).into()
+        (Sym16::from(self) * Sym16::from(rhs)).into()
     }
 }
+
 impl Mul<Sym16> for Sym16 {
     type Output = Sym16;
 

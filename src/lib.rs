@@ -1,5 +1,12 @@
 #![feature(type_alias_enum_variants)]
 
+extern crate bincode;
+
+extern crate serde;
+extern crate serde_bytes;
+#[macro_use]
+extern crate serde_derive;
+
 #[macro_use]
 extern crate lazy_static;
 
