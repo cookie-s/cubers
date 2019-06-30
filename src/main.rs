@@ -33,8 +33,8 @@ fn main() {
     println!("{:?}", solve);
 
     if let Ok(moves) = solve {
-        for m in moves.iter() {
-            cl = *m * cl;
+        for &m in moves.iter() {
+            cl = m * cl;
         }
         let c = cubers::RubikCube(cl);
         println!("{:?}", c);
