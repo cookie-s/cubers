@@ -14,7 +14,7 @@ pub struct EPermIterator(u16);
 pub const EPERM_COUNT: usize = FACT8;
 
 impl EPerm {
-    pub fn iter() -> EPermIterator {
+    pub const fn iter() -> EPermIterator {
         EPermIterator(0)
     }
 }

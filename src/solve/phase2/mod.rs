@@ -410,11 +410,13 @@ impl From<PruneCoord> for Phase2Coord {
 
 #[test]
 fn sym_move_one() {
-    use P2Move::*;
+    use std::convert::TryFrom;
 
     let solved = PruneVec::from(Phase2Coord::from(
         Phase2Cube::try_from(cube::SOLVED).unwrap(),
     ));
+
+    use P2Move::*;
 
     for &m in &[U1, U3, D1, D3] {
         assert_eq!(m * solved, U1 * solved, "{:?}", m);

@@ -14,7 +14,7 @@ pub struct CPermIterator(u16);
 pub const CPERM_COUNT: usize = FACT8;
 
 impl CPerm {
-    pub fn iter() -> CPermIterator {
+    pub const fn iter() -> CPermIterator {
         CPermIterator(0)
     }
 }
@@ -40,7 +40,7 @@ impl From<CPerm> for cube::CubieLevel {
         for i in 0..8 {
             res.0[i as usize].c = cube::SOLVED.0[array[i]].c;
         }
-        return res;
+        res
     }
 }
 

@@ -10,7 +10,7 @@ const FACT4: usize = 4 * 3 * 2 * 1;
 pub struct UDSliceIterator(u8);
 pub const UDSLICE_COUNT: usize = FACT4;
 impl UDSlice {
-    pub fn iter() -> UDSliceIterator {
+    pub const fn iter() -> UDSliceIterator {
         UDSliceIterator(0)
     }
 }
