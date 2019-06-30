@@ -33,7 +33,7 @@ impl Phase2 {
     }
 
     pub fn new() -> Self {
-        let mut table = vec![!0u8; CPERMCOSET_COUNT * EPERM_COUNT];
+        let mut rawtable = vec![!0u8; CPERMCOSET_COUNT * EPERM_COUNT];
         {
             let mut queue = std::collections::VecDeque::with_capacity(37144996);
 
@@ -42,10 +42,10 @@ impl Phase2 {
             let solved: PruneCoord = solved.into();
 
             queue.push_back(solved);
-            table[solved.coord()] = 0;
+            rawtable[solved.coord()] = 0;
 
             while let Some(pc) = queue.pop_front() {
-                let dis = table[pc.coord()];
+                let dis = rawtable[pc.coord()];
 
                 if dis >= 18 {
                     break;
@@ -57,7 +57,7 @@ impl Phase2 {
                     let cur = s * cur;
 
                     let t: PruneCoord = cur.into();
-                    if table[t.coord()] < dis {
+                    if rawtable[t.coord()] < dis {
                         continue;
                     }
 
@@ -67,8 +67,8 @@ impl Phase2 {
                         let t: PruneCoord = cur.into();
                         let coord = t.coord();
 
-                        if table[coord] > dis + 1 {
-                            table[coord] = dis + 1;
+                        if rawtable[coord] > dis + 1 {
+                            rawtable[coord] = dis + 1;
                             queue.push_back(t);
                         }
                     }
@@ -76,7 +76,7 @@ impl Phase2 {
             }
 
             let mut t = [0; 18 + 1];
-            for &v in table.iter() {
+            for &v in rawtable.iter() {
                 if v == !0 {
                     continue;
                 }
@@ -89,7 +89,7 @@ impl Phase2 {
             prunetable: VecU2::new(3, CPERMCOSET_COUNT * EPERM_COUNT),
         };
 
-        for (i, &v) in table.iter().enumerate() {
+        for (i, &v) in rawtable.iter().enumerate() {
             if v != !0 {
                 p2.prunetable.set(i, v as u8 % 3);
             }
@@ -407,22 +407,26 @@ impl super::Phase for Phase2 {
         }
 
         let lb = cur_lowerbound(&self, src);
-        println!("{}", lb);
+        println!("lb: {}", lb);
 
-        const MAX_STEPS: i8 = 18;
+        const MAX_STEPS: u8 = 18;
+
         let mut heap = BinaryHeap::new();
         let mut set = HashSet::new();
+
         heap.push((-0i8, src, lb, 0));
         set.insert(src);
 
         while let Some((dist, state, lb, rotates)) = heap.pop() {
             let dist = -dist;
+            let dist = dist as u8;
 
             if state == solved {
-                println!("{}", dist);
+                println!("dist: {}", dist);
                 return Ok(recover_rotates(dist as usize, rotates));
             }
-            if dist + lb as i8 >= MAX_STEPS {
+
+            if dist as u8 + lb >= MAX_STEPS {
                 continue;
             }
 
@@ -435,20 +439,21 @@ impl super::Phase for Phase2 {
                 set.insert(nstate);
 
                 let nlb = match self.prunetable.get(PruneCoord::from(nstate).coord()) {
-                    i if i == (3 + lb - 1) % 3 => lb - 1,
-                    i if i == (3 + lb) % 3 => lb,
-                    i if i == (3 + lb + 1) % 3 => lb + 1,
+                    i if i == lb % 3 => lb,
+                    i if i == (lb + 1) % 3 => lb + 1,
+                    i if i == (lb + 2) % 3 => lb - 1,
                     _ => unreachable!(),
                 };
 
                 heap.push((
-                    -(dist + 1) as i8,
+                    -(dist as i8 + 1),
                     nstate,
                     nlb,
                     rotates * P2MOVE_COUNT as u64 + m as u64,
                 ));
             }
         }
+
         Err(())
     }
 }
