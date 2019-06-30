@@ -2,4 +2,4 @@
 
 algo ref: http://kociemba.org/cube.htm
 
-![_](https://imgur.com/download/MtlIUs2)
+![_](https://i.imgur.com/V9Ucvbm.png)
