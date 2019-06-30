@@ -1,396 +1,24 @@
-use super::cube;
+mod cperm;
+mod eperm;
+mod udslice;
+
+use self::cperm::*;
+use self::eperm::*;
+use self::udslice::*;
+
+mod p2move;
+use self::p2move::*;
+
+use crate::cube;
 use crate::solve::util::VecU2;
-use cube::{Move, Sym16, SYM16_COUNT};
+use cube::{Move, Sym16};
 use num_traits::cast::FromPrimitive;
 use std::ops::Mul;
 use strum::IntoEnumIterator;
 
-const FACT4: usize = 4 * 3 * 2 * 1;
-const FACT8: usize = 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1;
-
-#[derive(Debug, Copy, Clone, EnumCount, EnumIter, FromPrimitive)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
-enum P2Move {
-    U1, U2, U3,
-    D1, D2, D3,
-    F2,
-    B2,
-    L2,
-    R2,
-}
-
-impl From<Move> for P2Move {
-    fn from(m: Move) -> P2Move {
-        match m {
-            Move::U1 => P2Move::U1,
-            Move::U2 => P2Move::U2,
-            Move::U3 => P2Move::U3,
-            Move::D1 => P2Move::D1,
-            Move::D2 => P2Move::D2,
-            Move::D3 => P2Move::D3,
-            Move::F2 => P2Move::F2,
-            Move::B2 => P2Move::B2,
-            Move::L2 => P2Move::L2,
-            Move::R2 => P2Move::R2,
-            _ => panic!("invalid argument"),
-        }
-    }
-}
-impl From<P2Move> for Move {
-    fn from(m: P2Move) -> Move {
-        match m {
-            P2Move::U1 => Move::U1,
-            P2Move::U2 => Move::U2,
-            P2Move::U3 => Move::U3,
-            P2Move::D1 => Move::D1,
-            P2Move::D2 => Move::D2,
-            P2Move::D3 => Move::D3,
-            P2Move::F2 => Move::F2,
-            P2Move::B2 => Move::B2,
-            P2Move::L2 => Move::L2,
-            P2Move::R2 => Move::R2,
-        }
-    }
-}
-
-impl std::ops::Mul<cube::CubieLevel> for P2Move {
-    type Output = cube::CubieLevel;
-    fn mul(self, rhs: cube::CubieLevel) -> cube::CubieLevel {
-        let m: Move = self.into();
-        m * rhs
-    }
-}
-impl Mul<P2Move> for Sym16 {
-    type Output = P2Move;
-    fn mul(self, rhs: P2Move) -> Self::Output {
-        (self * Move::from(rhs)).unwrap().into()
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
-struct CPerm(u16); // Corner Permutation Coordinate
-
-#[derive(Debug, Copy, Clone)]
-struct CPermIterator(u16);
-const CPERM_COUNT: usize = FACT8;
-impl std::iter::Iterator for CPermIterator {
-    type Item = CPerm;
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.0;
-        self.0 += 1;
-        if (i as usize) < CPERM_COUNT {
-            return Some(CPerm(i));
-        }
-        None
-    }
-}
-impl CPerm {
-    fn iter() -> CPermIterator {
-        CPermIterator(0)
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-struct EPermIterator(u16);
-const EPERM_COUNT: usize = FACT8;
-impl std::iter::Iterator for EPermIterator {
-    type Item = EPerm;
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.0;
-        self.0 += 1;
-        if (i as usize) < EPERM_COUNT {
-            return Some(EPerm(i));
-        }
-        None
-    }
-}
-impl EPerm {
-    fn iter() -> EPermIterator {
-        EPermIterator(0)
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-struct UDSliceIterator(u8);
-const UDSLICE_COUNT: usize = FACT4;
-impl std::iter::Iterator for UDSliceIterator {
-    type Item = UDSlice;
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.0;
-        self.0 += 1;
-        if (i as usize) < UDSLICE_COUNT {
-            return Some(UDSlice(i));
-        }
-        None
-    }
-}
-impl UDSlice {
-    fn iter() -> UDSliceIterator {
-        UDSliceIterator(0)
-    }
-}
-impl From<cube::CubieLevel> for CPerm {
-    fn from(cl: cube::CubieLevel) -> CPerm {
-        use super::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(8);
-
-        let array: Vec<_> = cl.0.iter().map(|c| c.c as u16).collect();
-        let res = shuffle.array_to_num(&array);
-        CPerm(res as u16)
-    }
-}
-impl From<CPerm> for cube::CubieLevel {
-    // return a representation
-    fn from(cp: CPerm) -> cube::CubieLevel {
-        use super::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(8);
-
-        let array = shuffle.num_to_array(cp.0 as usize);
-        let mut res = cube::SOLVED;
-        for i in 0..8 {
-            res.0[i as usize].c = cube::SOLVED.0[array[i]].c;
-        }
-        return res;
-    }
-}
-
-#[test]
-fn cperm() {
-    use super::*;
-    for m in P2Move::iter() {
-        let cube = m * cube::SOLVED;
-        let cp: CPerm = cube.into();
-        assert_eq!(
-            cube.0
-                .iter()
-                .map(|c| c.c)
-                .collect::<Vec<cube::CornerCubePos>>(),
-            cube::CubieLevel::from(cp)
-                .0
-                .iter()
-                .map(|c| c.c)
-                .collect::<Vec<cube::CornerCubePos>>()
-        );
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
-struct EPerm(u16); // Edge Permutation Coordinate
-impl From<cube::CubieLevel> for EPerm {
-    fn from(cl: cube::CubieLevel) -> EPerm {
-        use super::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(8);
-
-        let array: Vec<_> = cl.1.iter().map(|e| e.e as u16).take(8).collect();
-        let res = shuffle.array_to_num(&array);
-        EPerm(res as u16)
-    }
-}
-impl From<EPerm> for cube::CubieLevel {
-    // return a representation
-    fn from(ep: EPerm) -> cube::CubieLevel {
-        use super::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(8);
-
-        let array = shuffle.num_to_array(ep.0 as usize);
-        let mut res = cube::SOLVED;
-        for i in 0..8 {
-            res.1[i as usize].e = cube::SOLVED.1[array[i]].e;
-        }
-        res
-    }
-}
-
-#[test]
-fn eperm() {
-    use super::*;
-    for m in P2Move::iter() {
-        let cube = m * cube::SOLVED;
-        let ep: EPerm = cube.into();
-        assert_eq!(
-            cube.1
-                .iter()
-                .map(|e| e.e)
-                .take(8)
-                .collect::<Vec<cube::EdgeCubePos>>(),
-            cube::CubieLevel::from(ep)
-                .1
-                .iter()
-                .map(|e| e.e)
-                .take(8)
-                .collect::<Vec<cube::EdgeCubePos>>()
-        );
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct UDSlice(u8); // phase2 UDSlice Coordinate
-impl From<cube::CubieLevel> for UDSlice {
-    fn from(cl: cube::CubieLevel) -> UDSlice {
-        use super::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(4);
-
-        let array: Vec<_> = cl.1.iter().skip(8).map(|e| e.e as u16 - 8).collect();
-        let res = shuffle.array_to_num(&array);
-        UDSlice(res as u8)
-    }
-}
-impl From<UDSlice> for cube::CubieLevel {
-    // return a representation
-    fn from(uds: UDSlice) -> cube::CubieLevel {
-        use super::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(4);
-
-        let array = shuffle.num_to_array(uds.0 as usize);
-        let mut res = cube::SOLVED;
-        for i in 0..4 {
-            res.1[i as usize + 8].e = cube::SOLVED.1[array[i] + 8].e;
-        }
-        res
-    }
-}
-
-#[test]
-fn udslice() {
-    use super::*;
-    for m in P2Move::iter() {
-        let cube = m * cube::SOLVED;
-        let ep: UDSlice = cube.into();
-        assert_eq!(
-            cube.1
-                .iter()
-                .map(|e| e.e)
-                .skip(8)
-                .collect::<Vec<cube::EdgeCubePos>>(),
-            cube::CubieLevel::from(ep)
-                .1
-                .iter()
-                .map(|e| e.e)
-                .skip(8)
-                .collect::<Vec<cube::EdgeCubePos>>()
-        );
-    }
-}
-
 #[derive(Deserialize, Serialize)]
 pub struct Phase2 {
-    prunetable: VecU2, // 2768 * FACT8
-}
-
-impl Mul<CPerm> for P2Move {
-    type Output = CPerm;
-    fn mul(self, rhs: CPerm) -> Self::Output {
-        lazy_static! {
-            static ref MEMO: Vec<CPerm> = {
-                let mut memo = vec![CPerm(!0); CPERM_COUNT * P2MOVE_COUNT];
-                for cp in CPerm::iter() {
-                    let cube: cube::CubieLevel = cp.into();
-                    for m in P2Move::iter() {
-                        let v: CPerm = (m * cube).into();
-                        memo[cp.0 as usize * P2MOVE_COUNT + (m as usize)] = v;
-                    }
-                }
-                memo
-            };
-        }
-        MEMO[rhs.0 as usize * P2MOVE_COUNT + self as usize]
-    }
-}
-impl Mul<EPerm> for P2Move {
-    type Output = EPerm;
-    fn mul(self, rhs: EPerm) -> Self::Output {
-        lazy_static! {
-            static ref MEMO: Vec<EPerm> = {
-                let mut memo = vec![EPerm(!0); EPERM_COUNT * P2MOVE_COUNT];
-                for ep in EPerm::iter() {
-                    let cube: cube::CubieLevel = ep.into();
-                    for m in P2Move::iter() {
-                        let v: EPerm = (m * cube).into();
-                        memo[ep.0 as usize * P2MOVE_COUNT + (m as usize)] = v;
-                    }
-                }
-                memo
-            };
-        }
-        MEMO[rhs.0 as usize * P2MOVE_COUNT + self as usize]
-    }
-}
-impl Mul<UDSlice> for P2Move {
-    type Output = UDSlice;
-    fn mul(self, rhs: UDSlice) -> Self::Output {
-        lazy_static! {
-            static ref MEMO: Vec<UDSlice> = {
-                let mut memo = vec![UDSlice(!0); UDSLICE_COUNT * P2MOVE_COUNT];
-                for uds in UDSlice::iter() {
-                    let cube: cube::CubieLevel = uds.into();
-                    for m in P2Move::iter() {
-                        let v: UDSlice = (m * cube).into();
-                        memo[uds.0 as usize * P2MOVE_COUNT + (m as usize)] = v;
-                    }
-                }
-                memo
-            };
-        }
-        MEMO[rhs.0 as usize * P2MOVE_COUNT + self as usize]
-    }
-}
-
-impl Mul<CPerm> for Sym16 {
-    type Output = CPerm;
-    fn mul(self, rhs: CPerm) -> Self::Output {
-        lazy_static! {
-            static ref MEMO: Vec<CPerm> = {
-                let mut memo = vec![CPerm(!0); CPERM_COUNT * SYM16_COUNT];
-                for cp in CPerm::iter() {
-                    let cube: cube::CubieLevel = cp.into();
-                    for s in Sym16::iter() {
-                        let v: CPerm = (s * cube).into();
-                        memo[cp.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
-                    }
-                }
-                memo
-            };
-        }
-        MEMO[rhs.0 as usize * SYM16_COUNT + self.0 as usize]
-    }
-}
-impl Mul<EPerm> for Sym16 {
-    type Output = EPerm;
-    fn mul(self, rhs: EPerm) -> Self::Output {
-        lazy_static! {
-            static ref MEMO: Vec<EPerm> = {
-                let mut memo = vec![EPerm(!0); EPERM_COUNT * SYM16_COUNT];
-                for ep in EPerm::iter() {
-                    let cube: cube::CubieLevel = ep.into();
-                    for s in Sym16::iter() {
-                        let v: EPerm = (s * cube).into();
-                        memo[ep.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
-                    }
-                }
-                memo
-            };
-        }
-        MEMO[rhs.0 as usize * SYM16_COUNT + self.0 as usize]
-    }
-}
-impl Mul<UDSlice> for Sym16 {
-    type Output = UDSlice;
-    fn mul(self, rhs: UDSlice) -> Self::Output {
-        lazy_static! {
-            static ref MEMO: Vec<UDSlice> = {
-                let mut memo = vec![UDSlice(!0); UDSLICE_COUNT * SYM16_COUNT];
-                for uds in UDSlice::iter() {
-                    let cube: cube::CubieLevel = uds.into();
-                    for s in Sym16::iter() {
-                        let v: UDSlice = (s * cube).into();
-                        memo[uds.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
-                    }
-                }
-                memo
-            };
-        }
-        MEMO[rhs.0 as usize * SYM16_COUNT + self.0 as usize]
-    }
+    prunetable: VecU2, // 2768 * EPERM_COUNT
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
@@ -401,10 +29,10 @@ impl From<CPerm> for CPermCoset {
     fn from(src: CPerm) -> CPermCoset {
         lazy_static! {
             static ref MEMO: Vec<CPermCoset> = {
-                let mut memo = vec![CPermCoset(!0); FACT8];
+                let mut memo = vec![CPermCoset(!0); CPERM_COUNT];
                 let mut cnt = 0;
 
-                for i in 0..FACT8 {
+                for i in 0..CPERM_COUNT {
                     let cp = CPerm(i as u16);
                     let cube: cube::CubieLevel = cp.into();
                     let mut found = None;
@@ -440,7 +68,7 @@ impl From<CPermCoset> for CPerm {
             static ref MEMO: Vec<CPerm> = {
                 let mut memo = vec![CPerm(!0); CPERMCOSET_COUNT];
 
-                for i in 0..FACT8 {
+                for i in 0..CPERM_COUNT {
                     let cp = CPerm(i as u16);
                     if memo[CPermCoset::from(cp).0 as usize] == CPerm(!0) {
                         memo[CPermCoset::from(cp).0 as usize] = cp;
@@ -578,9 +206,12 @@ struct Phase2Vec {
     ep: EPerm,
     uds: UDSlice,
 }
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct Phase2Coord(u32, u16);
+
 impl From<Phase2Coord> for Phase2Vec {
     fn from(src: Phase2Coord) -> Self {
-        let (cp, uds) = (src.0 / FACT4 as u32, src.0 % FACT4 as u32);
+        let (cp, uds) = (src.0 / UDSLICE_COUNT as u32, src.0 % UDSLICE_COUNT as u32);
         Phase2Vec {
             cp: CPerm(cp as u16),
             ep: EPerm(src.1),
@@ -591,14 +222,12 @@ impl From<Phase2Coord> for Phase2Vec {
 impl From<Phase2Vec> for Phase2Coord {
     fn from(src: Phase2Vec) -> Self {
         Phase2Coord(
-            src.cp.0 as u32 * FACT4 as u32 + src.uds.0 as u32,
+            src.cp.0 as u32 * UDSLICE_COUNT as u32 + src.uds.0 as u32,
             src.ep.0 as u16,
         )
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Phase2Coord(u32, u16);
 impl<T: Into<Phase2Cube>> From<T> for Phase2Coord {
     fn from(src: T) -> Self {
         let src: Phase2Cube = src.into();
@@ -654,7 +283,6 @@ struct PruneVec {
     coset: CPermCoset,
     ep: EPerm,
 }
-
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 struct PruneCoord(u32);
 
@@ -678,6 +306,7 @@ impl From<PruneCoord> for PruneVec {
         }
     }
 }
+
 impl Mul<PruneVec> for P2Move {
     type Output = PruneVec;
     fn mul(self, rhs: PruneVec) -> Self::Output {
