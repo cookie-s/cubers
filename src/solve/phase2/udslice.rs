@@ -9,17 +9,6 @@ const FACT4: usize = 4 * 3 * 2 * 1;
 #[derive(Debug, Copy, Clone)]
 pub struct UDSliceIterator(u8);
 pub const UDSLICE_COUNT: usize = FACT4;
-impl std::iter::Iterator for UDSliceIterator {
-    type Item = UDSlice;
-    fn next(&mut self) -> Option<Self::Item> {
-        let i = self.0;
-        self.0 += 1;
-        if (i as usize) < UDSLICE_COUNT {
-            return Some(UDSlice(i));
-        }
-        None
-    }
-}
 impl UDSlice {
     pub fn iter() -> UDSliceIterator {
         UDSliceIterator(0)
@@ -113,3 +102,23 @@ impl Mul<UDSlice> for Sym16 {
         MEMO[rhs.0 as usize * SYM16_COUNT + self.0 as usize]
     }
 }
+
+impl std::iter::Iterator for UDSliceIterator {
+    type Item = UDSlice;
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.0;
+        self.0 += 1;
+        if (i as usize) < UDSLICE_COUNT {
+            return Some(UDSlice(i));
+        }
+        None
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            UDSLICE_COUNT - self.0 as usize,
+            Some(UDSLICE_COUNT - self.0 as usize),
+        )
+    }
+}
+impl std::iter::FusedIterator for UDSliceIterator {}
+impl std::iter::ExactSizeIterator for UDSliceIterator {}

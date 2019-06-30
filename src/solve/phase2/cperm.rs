@@ -113,4 +113,12 @@ impl std::iter::Iterator for CPermIterator {
         }
         None
     }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (
+            CPERM_COUNT - self.0 as usize,
+            Some(CPERM_COUNT - self.0 as usize),
+        )
+    }
 }
+impl std::iter::FusedIterator for CPermIterator {}
+impl std::iter::ExactSizeIterator for CPermIterator {}
