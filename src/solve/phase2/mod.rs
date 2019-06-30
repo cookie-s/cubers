@@ -21,7 +21,7 @@ use strum::IntoEnumIterator;
 
 #[derive(Deserialize, Serialize)]
 pub struct Phase2 {
-    prunetable: VecU2, // 2768 * EPERM_COUNT
+    prunetable: VecU2, // CPERMCOSET_COUNT * EPERM_COUNT
 }
 
 impl Phase2 {
