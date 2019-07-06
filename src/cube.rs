@@ -33,14 +33,14 @@ pub const SOLVED: CubieLevel = CubieLevel(
     ],
 );
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CornerCubePos {
     URF, UFL, ULB, UBR, DFR, DLF, DBL, DRB,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EdgeCubePos {
     UR, UF, UL, UB, DR, DF, DL, DB, FR, FL, BL, BR,
 }
