@@ -21,8 +21,8 @@ impl CPerm {
 
 impl From<cube::CubieLevel> for CPerm {
     fn from(cl: cube::CubieLevel) -> CPerm {
-        use crate::solve::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(8);
+        use crate::solve::util::FisherShuffle8;
+        let shuffle = FisherShuffle8::new();
 
         let array: Vec<_> = cl.0.iter().map(|c| c.c as u16).collect();
         let res = shuffle.array_to_num(&array);
@@ -32,8 +32,8 @@ impl From<cube::CubieLevel> for CPerm {
 impl From<CPerm> for cube::CubieLevel {
     // return a representation
     fn from(cp: CPerm) -> cube::CubieLevel {
-        use crate::solve::util::FisherShuffle;
-        let shuffle = FisherShuffle::new(8);
+        use crate::solve::util::FisherShuffle8;
+        let shuffle = FisherShuffle8::new();
 
         let array = shuffle.num_to_array(cp.0 as usize);
         let mut res = cube::SOLVED;

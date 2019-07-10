@@ -26,6 +26,8 @@ pub struct Phase2 {
     prunetable: VecU2, // CPERMCOSET_COUNT * EPERM_COUNT
 }
 
+pub const MAX_STEPS: usize = 18;
+
 impl Phase2 {
     pub fn new_from_cache<R>(src: R) -> bincode::Result<Self>
     where
@@ -48,28 +50,22 @@ impl Phase2 {
 
             while let Some(pc) = queue.pop_front() {
                 let dis = rawtable[pc.coord()];
-
-                if dis >= 18 {
+                if dis >= MAX_STEPS as u8 {
                     break;
                 }
 
-                let cur: Phase2Coord = pc.into();
+                let cur: Phase2Vec = PruneVec::from(pc).into();
 
                 for s in Sym16::iter() {
                     let cur = s * cur;
 
-                    let t: PruneCoord = cur.into();
-                    if rawtable[t.coord()] < dis {
-                        continue;
-                    }
-
                     for m in P2Move::iter() {
                         let cur = m * cur;
 
-                        let t: PruneCoord = cur.into();
+                        let t: PruneCoord = PruneVec::from(cur).into();
                         let coord = t.coord();
 
-                        if rawtable[coord] > dis + 1 {
+                        if rawtable[coord] == !0 {
                             rawtable[coord] = dis + 1;
                             queue.push_back(t);
                         }
@@ -77,7 +73,7 @@ impl Phase2 {
                 }
             }
 
-            let mut t = [0; 18 + 1];
+            let mut t = [0; MAX_STEPS + 1];
             for &v in rawtable.iter() {
                 if v == !0 {
                     continue;
@@ -149,7 +145,7 @@ impl Phase2Cube {
 
             let mut set = HashSet::new();
             let mut heap = BinaryHeap::new();
-            heap.push((-0, src));
+            heap.push((-0i8, src));
             set.insert(src);
 
             let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
@@ -163,21 +159,22 @@ impl Phase2Cube {
                     return dist as u8;
                 }
 
-                let cur: Phase2Coord = pc.into();
+                let cur: Phase2Vec = PruneVec::from(pc).into();
+                let dec = (p2.prunetable.get(pc.coord()) + 2) % 3;
 
                 for s in Sym16::iter() {
                     let cur = s * cur;
 
                     for m in P2Move::iter() {
-                        let npc: PruneCoord = (m * cur).into();
+                        let cur = m * cur;
+
+                        let npc: PruneCoord = PruneVec::from(cur).into();
 
                         if set.contains(&npc) {
                             continue;
                         }
 
-                        if (3 + p2.prunetable.get(npc.coord()) - p2.prunetable.get(pc.coord())) % 3
-                            == 3 - 1
-                        {
+                        if p2.prunetable.get(npc.coord()) == dec {
                             heap.push((-(dist + 1), npc));
                             set.insert(npc);
                         }
@@ -188,8 +185,6 @@ impl Phase2Cube {
 
         let lb = cur_lowerbound(p2, src);
         println!("lb: {}", lb);
-
-        const MAX_STEPS: u8 = 18;
 
         let mut heap = BinaryHeap::new();
         let mut set = HashSet::new();
@@ -206,17 +201,8 @@ impl Phase2Cube {
                 return recover_rotates(dist as usize, rotates);
             }
 
-            if dist as u8 + lb >= MAX_STEPS {
-                continue;
-            }
-
             for m in P2Move::iter() {
                 let nstate = m * state;
-                if set.contains(&nstate) {
-                    continue;
-                }
-
-                set.insert(nstate);
 
                 let nlb = match p2.prunetable.get(PruneCoord::from(nstate).coord()) {
                     i if i == lb % 3 => lb,
@@ -224,6 +210,15 @@ impl Phase2Cube {
                     i if i == (lb + 2) % 3 => lb - 1,
                     _ => unreachable!(),
                 };
+
+                if dist + 1 + nlb >= MAX_STEPS as u8 {
+                    continue;
+                }
+
+                if set.contains(&nstate) {
+                    continue;
+                }
+                set.insert(nstate);
 
                 heap.push((
                     -(dist as i8 + 1),
@@ -344,25 +339,9 @@ impl From<PruneCoord> for PruneVec {
         }
     }
 }
-
-impl Mul<PruneVec> for P2Move {
-    type Output = PruneVec;
-    fn mul(self, rhs: PruneVec) -> Self::Output {
-        let cp = self * CPerm::from(rhs.coset);
-        let coset: CPermCoset = cp.into();
-        let s = Sym16::from(cp);
-
-        PruneVec {
-            coset: coset,
-            ep: s * (self * rhs.ep),
-        }
-    }
-}
-
-impl Mul<PruneCoord> for P2Move {
-    type Output = PruneCoord;
-    fn mul(self, rhs: PruneCoord) -> Self::Output {
-        (self * PruneVec::from(rhs)).into()
+impl From<Phase2Vec> for PruneCoord {
+    fn from(src: Phase2Vec) -> Self {
+        PruneVec::from(src).into()
     }
 }
 
@@ -383,9 +362,8 @@ impl From<CPerm> for Sym16 {
     }
 }
 
-impl From<Phase2Coord> for PruneVec {
-    fn from(src: Phase2Coord) -> Self {
-        let src: Phase2Vec = src.into();
+impl From<Phase2Vec> for PruneVec {
+    fn from(src: Phase2Vec) -> Self {
         let coset: CPermCoset = src.cp.into();
         let s = Sym16::from(src.cp);
 
@@ -395,37 +373,28 @@ impl From<Phase2Coord> for PruneVec {
         }
     }
 }
-impl From<PruneCoord> for Phase2Coord {
-    // representation
-    fn from(src: PruneCoord) -> Self {
-        let src: PruneVec = src.into();
-        Phase2Vec {
-            cp: src.coset.into(),
-            ep: src.ep.into(),
-            uds: UDSlice(0),
-        }
-        .into()
+
+impl From<Phase2Coord> for PruneVec {
+    fn from(src: Phase2Coord) -> Self {
+        Phase2Vec::from(src).into()
     }
 }
 
-#[test]
-fn sym_move_one() {
-    use std::convert::TryFrom;
-
-    let solved = PruneVec::from(Phase2Coord::from(
-        Phase2Cube::try_from(cube::SOLVED).unwrap(),
-    ));
-
-    use P2Move::*;
-
-    for &m in &[U1, U3, D1, D3] {
-        assert_eq!(m * solved, U1 * solved, "{:?}", m);
+impl From<PruneVec> for Phase2Vec {
+    // representation
+    fn from(src: PruneVec) -> Self {
+        Phase2Vec {
+            cp: src.coset.into(),
+            ep: src.ep,
+            uds: UDSlice(0),
+        }
     }
-    for &m in &[U2, D2] {
-        assert_eq!(m * solved, U2 * solved, "{:?}", m);
-    }
-    for &m in &[F2, B2, L2, R2] {
-        assert_eq!(m * solved, F2 * solved, "{:?}", m);
+}
+
+impl From<PruneCoord> for Phase2Coord {
+    // representation
+    fn from(src: PruneCoord) -> Self {
+        Phase2Vec::from(PruneVec::from(src)).into()
     }
 }
 
