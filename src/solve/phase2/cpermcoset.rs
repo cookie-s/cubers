@@ -1,4 +1,4 @@
-use super::cperm::*;
+use super::cperm::{CPerm, COUNT as CPERM_COUNT};
 use super::p2move::{P2Move, P2MOVE_COUNT};
 use crate::cube;
 use cube::Sym16;
@@ -9,7 +9,7 @@ use strum::IntoEnumIterator;
 pub struct CPermCoset(pub u16);
 
 #[derive(Debug, Copy, Clone)]
-pub struct CPermCosetIterator(u16);
+pub struct Iter(u16);
 pub const CPERMCOSET_COUNT: usize = 2768;
 
 impl From<CPerm> for CPermCoset {
@@ -21,22 +21,20 @@ impl From<CPerm> for CPermCoset {
 
                 for (i, cp) in CPerm::iter().enumerate() {
                     let cube: cube::CubieLevel = cp.into();
-                    let mut found = None;
+                    memo[i] = Sym16::iter()
+                        .find_map(|s| {
+                            let cube = s * cube;
+                            let v: CPerm = cube.into();
 
-                    for s in Sym16::iter() {
-                        let cube = s * cube;
-                        let v: CPerm = cube.into();
-
-                        if memo[v.0 as usize] != CPermCoset(!0) {
-                            found = Some(memo[v.0 as usize]);
-                            break;
-                        }
-                    }
-                    if found == None {
-                        found = Some(CPermCoset(cnt as u16));
-                        cnt += 1;
-                    }
-                    memo[i] = found.unwrap()
+                            if memo[v.0 as usize] != CPermCoset(!0) {
+                                return Some(memo[v.0 as usize]);
+                            }
+                            None
+                        })
+                        .unwrap_or_else(|| {
+                            cnt += 1;
+                            CPermCoset((cnt - 1) as u16)
+                        });
                 }
                 assert_eq!(cnt, CPERMCOSET_COUNT);
 
@@ -54,8 +52,9 @@ impl From<CPermCoset> for CPerm {
                 let mut memo = vec![CPerm(!0); CPERMCOSET_COUNT];
 
                 for cp in CPerm::iter() {
-                    if memo[CPermCoset::from(cp).0 as usize] == CPerm(!0) {
-                        memo[CPermCoset::from(cp).0 as usize] = cp;
+                    let idx = CPermCoset::from(cp).0 as usize;
+                    if memo[idx] == CPerm(!0) {
+                        memo[idx] = cp;
                     }
                 }
                 memo
@@ -89,12 +88,12 @@ impl Mul<CPermCoset> for P2Move {
 }
 
 impl CPermCoset {
-    pub const fn iter() -> CPermCosetIterator {
-        CPermCosetIterator(0)
+    pub const fn iter() -> Iter {
+        Iter(0)
     }
 }
 
-impl std::iter::Iterator for CPermCosetIterator {
+impl std::iter::Iterator for Iter {
     type Item = CPermCoset;
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.0;
@@ -111,5 +110,5 @@ impl std::iter::Iterator for CPermCosetIterator {
         )
     }
 }
-impl std::iter::FusedIterator for CPermCosetIterator {}
-impl std::iter::ExactSizeIterator for CPermCosetIterator {}
+impl std::iter::FusedIterator for Iter {}
+impl std::iter::ExactSizeIterator for Iter {}

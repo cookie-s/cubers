@@ -8,30 +8,23 @@ const FACT8: usize = 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
 pub struct EPerm(pub u16); // Edge Permutation Coordinate
+use EPerm as S;
 
-#[derive(Debug, Copy, Clone)]
-pub struct EPermIterator(u16);
-pub const EPERM_COUNT: usize = FACT8;
+pub const COUNT: usize = FACT8;
 
-impl EPerm {
-    pub const fn iter() -> EPermIterator {
-        EPermIterator(0)
-    }
-}
-
-impl From<cube::CubieLevel> for EPerm {
-    fn from(cl: cube::CubieLevel) -> EPerm {
+impl From<cube::CubieLevel> for S {
+    fn from(cl: cube::CubieLevel) -> S {
         use crate::solve::util::FisherShuffle8;
         let shuffle = FisherShuffle8::new();
 
         let array: Vec<_> = cl.1.iter().map(|e| e.e as u16).take(8).collect();
         let res = shuffle.array_to_num(&array);
-        EPerm(res as u16)
+        S(res as u16)
     }
 }
-impl From<EPerm> for cube::CubieLevel {
+impl From<S> for cube::CubieLevel {
     // return a representation
-    fn from(ep: EPerm) -> cube::CubieLevel {
+    fn from(ep: S) -> cube::CubieLevel {
         use crate::solve::util::FisherShuffle8;
         let shuffle = FisherShuffle8::new();
 
@@ -65,16 +58,17 @@ fn eperm() {
         );
     }
 }
-impl Mul<EPerm> for P2Move {
-    type Output = EPerm;
-    fn mul(self, rhs: EPerm) -> Self::Output {
+
+impl Mul<S> for P2Move {
+    type Output = S;
+    fn mul(self, rhs: S) -> Self::Output {
         lazy_static! {
-            static ref MEMO: Vec<EPerm> = {
-                let mut memo = vec![EPerm(!0); EPERM_COUNT * P2MOVE_COUNT];
-                for ep in EPerm::iter() {
+            static ref MEMO: Vec<S> = {
+                let mut memo = vec![S(!0); COUNT * P2MOVE_COUNT];
+                for ep in S::iter() {
                     let cube: cube::CubieLevel = ep.into();
                     for m in P2Move::iter() {
-                        let v: EPerm = (m * cube).into();
+                        let v: S = (m * cube).into();
                         memo[ep.0 as usize * P2MOVE_COUNT + (m as usize)] = v;
                     }
                 }
@@ -84,17 +78,17 @@ impl Mul<EPerm> for P2Move {
         MEMO[rhs.0 as usize * P2MOVE_COUNT + self as usize]
     }
 }
-impl Mul<EPerm> for Sym16 {
-    type Output = EPerm;
-    fn mul(self, rhs: EPerm) -> Self::Output {
+impl Mul<S> for Sym16 {
+    type Output = S;
+    fn mul(self, rhs: S) -> Self::Output {
         lazy_static! {
-            static ref MEMO: Vec<EPerm> = {
-                let mut memo = vec![EPerm(!0); EPERM_COUNT * SYM16_COUNT];
-                for ep in EPerm::iter() {
-                    let cube: cube::CubieLevel = ep.into();
+            static ref MEMO: Vec<S> = {
+                let mut memo = vec![S(!0); COUNT * SYM16_COUNT];
+                for x in S::iter() {
+                    let cube: cube::CubieLevel = x.into();
                     for s in Sym16::iter() {
-                        let v: EPerm = (s * cube).into();
-                        memo[ep.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
+                        let v: S = (s * cube).into();
+                        memo[x.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
                     }
                 }
                 memo
@@ -104,22 +98,26 @@ impl Mul<EPerm> for Sym16 {
     }
 }
 
-impl std::iter::Iterator for EPermIterator {
-    type Item = EPerm;
+#[derive(Debug, Copy, Clone)]
+pub struct Iter(u16);
+impl S {
+    pub const fn iter() -> Iter {
+        Iter(0)
+    }
+}
+impl std::iter::Iterator for Iter {
+    type Item = S;
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.0;
         self.0 += 1;
-        if (i as usize) < EPERM_COUNT {
-            return Some(EPerm(i));
+        if (i as usize) < COUNT {
+            return Some(S(i));
         }
         None
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            EPERM_COUNT - self.0 as usize,
-            Some(EPERM_COUNT - self.0 as usize),
-        )
+        (COUNT - self.0 as usize, Some(COUNT - self.0 as usize))
     }
 }
-impl std::iter::FusedIterator for EPermIterator {}
-impl std::iter::ExactSizeIterator for EPermIterator {}
+impl std::iter::FusedIterator for Iter {}
+impl std::iter::ExactSizeIterator for Iter {}

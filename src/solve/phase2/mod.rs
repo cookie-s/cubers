@@ -2,9 +2,9 @@ mod cperm;
 mod eperm;
 mod udslice;
 
-use self::cperm::*;
-use self::eperm::*;
-use self::udslice::*;
+use self::cperm::{CPerm, COUNT as CPERM_COUNT};
+use self::eperm::{EPerm, COUNT as EPERM_COUNT};
+use self::udslice::{UDSlice, COUNT as UDSLICE_COUNT};
 
 mod cpermcoset;
 use self::cpermcoset::*;

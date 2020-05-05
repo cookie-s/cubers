@@ -8,30 +8,23 @@ const FACT8: usize = 8 * 7 * 6 * 5 * 4 * 3 * 2 * 1;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
 pub struct CPerm(pub u16); // Corner Permutation Coordinate
+use CPerm as S;
 
-#[derive(Debug, Copy, Clone)]
-pub struct CPermIterator(u16);
-pub const CPERM_COUNT: usize = FACT8;
+pub const COUNT: usize = FACT8;
 
-impl CPerm {
-    pub const fn iter() -> CPermIterator {
-        CPermIterator(0)
-    }
-}
-
-impl From<cube::CubieLevel> for CPerm {
-    fn from(cl: cube::CubieLevel) -> CPerm {
+impl From<cube::CubieLevel> for S {
+    fn from(cl: cube::CubieLevel) -> S {
         use crate::solve::util::FisherShuffle8;
         let shuffle = FisherShuffle8::new();
 
         let array: Vec<_> = cl.0.iter().map(|c| c.c as u16).collect();
         let res = shuffle.array_to_num(&array);
-        CPerm(res as u16)
+        S(res as u16)
     }
 }
-impl From<CPerm> for cube::CubieLevel {
+impl From<S> for cube::CubieLevel {
     // return a representation
-    fn from(cp: CPerm) -> cube::CubieLevel {
+    fn from(cp: S) -> cube::CubieLevel {
         use crate::solve::util::FisherShuffle8;
         let shuffle = FisherShuffle8::new();
 
@@ -64,16 +57,16 @@ fn cperm() {
     }
 }
 
-impl Mul<CPerm> for P2Move {
-    type Output = CPerm;
-    fn mul(self, rhs: CPerm) -> Self::Output {
+impl Mul<S> for P2Move {
+    type Output = S;
+    fn mul(self, rhs: S) -> Self::Output {
         lazy_static! {
-            static ref MEMO: Vec<CPerm> = {
-                let mut memo = vec![CPerm(!0); CPERM_COUNT * P2MOVE_COUNT];
-                for cp in CPerm::iter() {
+            static ref MEMO: Vec<S> = {
+                let mut memo = vec![S(!0); COUNT * P2MOVE_COUNT];
+                for cp in S::iter() {
                     let cube: cube::CubieLevel = cp.into();
                     for m in P2Move::iter() {
-                        let v: CPerm = (m * cube).into();
+                        let v: S = (m * cube).into();
                         memo[cp.0 as usize * P2MOVE_COUNT + (m as usize)] = v;
                     }
                 }
@@ -83,17 +76,17 @@ impl Mul<CPerm> for P2Move {
         MEMO[rhs.0 as usize * P2MOVE_COUNT + self as usize]
     }
 }
-impl Mul<CPerm> for Sym16 {
-    type Output = CPerm;
-    fn mul(self, rhs: CPerm) -> Self::Output {
+impl Mul<S> for Sym16 {
+    type Output = S;
+    fn mul(self, rhs: S) -> Self::Output {
         lazy_static! {
-            static ref MEMO: Vec<CPerm> = {
-                let mut memo = vec![CPerm(!0); CPERM_COUNT * SYM16_COUNT];
-                for cp in CPerm::iter() {
-                    let cube: cube::CubieLevel = cp.into();
+            static ref MEMO: Vec<S> = {
+                let mut memo = vec![S(!0); COUNT * SYM16_COUNT];
+                for x in S::iter() {
+                    let cube: cube::CubieLevel = x.into();
                     for s in Sym16::iter() {
-                        let v: CPerm = (s * cube).into();
-                        memo[cp.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
+                        let v: S = (s * cube).into();
+                        memo[x.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
                     }
                 }
                 memo
@@ -103,22 +96,26 @@ impl Mul<CPerm> for Sym16 {
     }
 }
 
-impl std::iter::Iterator for CPermIterator {
-    type Item = CPerm;
+#[derive(Debug, Copy, Clone)]
+pub struct Iter(u16);
+impl S {
+    pub const fn iter() -> Iter {
+        Iter(0)
+    }
+}
+impl std::iter::Iterator for Iter {
+    type Item = S;
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.0;
         self.0 += 1;
-        if (i as usize) < CPERM_COUNT {
-            return Some(CPerm(i));
+        if (i as usize) < COUNT {
+            return Some(S(i));
         }
         None
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            CPERM_COUNT - self.0 as usize,
-            Some(CPERM_COUNT - self.0 as usize),
-        )
+        (COUNT - self.0 as usize, Some(COUNT - self.0 as usize))
     }
 }
-impl std::iter::FusedIterator for CPermIterator {}
-impl std::iter::ExactSizeIterator for CPermIterator {}
+impl std::iter::FusedIterator for Iter {}
+impl std::iter::ExactSizeIterator for Iter {}
