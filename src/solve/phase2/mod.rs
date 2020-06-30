@@ -29,11 +29,23 @@ pub struct Phase2 {
 pub const MAX_STEPS: usize = 18;
 
 impl Phase2 {
-    pub fn new_from_cache<R>(src: R) -> bincode::Result<Self>
+    pub fn new_from_cache<R>(src: R) -> Result<Self, ()>
     where
         R: std::io::Read,
     {
-        bincode::deserialize_from(src)
+        use crate::hash::{Digest, DigestWriter, Sha256};
+        use crate::tee::TeeReader;
+
+        let mut hasher = Sha256::new();
+        let hashwriter = DigestWriter::new(&mut hasher);
+        let reader = TeeReader::new(src, hashwriter);
+        let result = bincode::deserialize_from(reader).or(Err(()))?;
+        let hash = hasher.finalize();
+        if hash[..] == hex!("562673e1f32373e41d653ec89967d5367924388812ca5f9a3245e2ec9be4f02c")[..]
+        {
+            return Ok(result);
+        }
+        Err(())
     }
 
     pub fn new() -> Self {
