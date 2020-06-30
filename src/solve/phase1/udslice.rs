@@ -1,7 +1,14 @@
 use crate::cube;
-use cube::{Move, Sym16, MOVE_COUNT, SYM16_COUNT};
+use crate::cube::{Move, MOVE_COUNT};
+use cube::{Sym16, SYM16_COUNT};
 use std::ops::Mul;
 use strum::IntoEnumIterator;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, FromPrimitive)]
+pub struct UDSlice(pub u16); // phase2 UDSlice Coordinate
+use UDSlice as S;
+
+pub const COUNT: usize = (12 * 11 * 10 * 9) / (4 * 3 * 2 * 1); // C(12, 4)
 
 const MAGIC: [[u16; 5]; 12] = [
     [1, 0, 0, 0, 0],
@@ -18,20 +25,15 @@ const MAGIC: [[u16; 5]; 12] = [
     [1, 11, 55, 165, 330],
 ];
 
-#[derive(Debug, Copy, Clone)]
-pub struct UDSliceIterator(u16);
-pub const UDSLICE_COUNT: usize = 495; // 12 C 4
-impl UDSlice {
-    pub const fn iter() -> UDSliceIterator {
-        UDSliceIterator(0)
-    }
-}
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct UDSlice(pub u16); // phase2 UDSlice Coordinate
-impl From<cube::CubieLevel> for UDSlice {
+impl From<cube::CubieLevel> for S {
     // https://math.stackexchange.com/questions/1363239/fast-way-to-get-a-position-of-combination-without-repetitions
-    fn from(cl: cube::CubieLevel) -> UDSlice {
-        let mut array: Vec<_> = cl.1.iter().skip(8).map(|e| e.e as u16).collect();
+    fn from(cl: cube::CubieLevel) -> S {
+        let mut array: Vec<_> =
+            cl.1.iter()
+                .enumerate()
+                .filter(|(_, &e)| e.e as u16 >= 8)
+                .map(|(i, _)| i as u16)
+                .collect();
         array.sort();
 
         let mut res = 0;
@@ -49,9 +51,9 @@ impl From<cube::CubieLevel> for UDSlice {
         UDSlice(res)
     }
 }
-impl From<UDSlice> for cube::CubieLevel {
+impl From<S> for cube::CubieLevel {
     // return a representation
-    fn from(uds: UDSlice) -> cube::CubieLevel {
+    fn from(uds: S) -> cube::CubieLevel {
         let mut ary = [0; 4];
         let mut uds = uds.0;
 
@@ -68,8 +70,9 @@ impl From<UDSlice> for cube::CubieLevel {
         }
 
         let mut res = cube::SOLVED;
+        // FIXME 違うと思う テストは通る
         for i in 0..4 {
-            res.1[i as usize + 8].e = cube::SOLVED.1[ary[i]].e;
+            res.1.swap(ary[i], i + 8);
         }
         res
     }
@@ -77,36 +80,50 @@ impl From<UDSlice> for cube::CubieLevel {
 
 #[test]
 fn udslice() {
-    use super::*;
-    for m in Move::iter() {
-        let cube = m * cube::SOLVED;
-
-        let mut uds1 = cube.1.iter().map(|e| e.e).skip(8).collect::<Vec<_>>();
-        uds1.sort();
-
-        let uds: UDSlice = cube.into();
-        let mut uds2 = cube::CubieLevel::from(uds)
-            .1
-            .iter()
-            .map(|e| e.e)
-            .skip(8)
-            .collect::<Vec<_>>();
-        uds2.sort();
-
-        assert_eq!(uds1, uds2, "{:?} {:?}", uds, m);
+    for m1 in Move::iter() {
+        for m2 in Move::iter() {
+            let cube = m2 * (m1 * cube::SOLVED);
+            let ep: UDSlice = cube.into();
+            assert_eq!(
+                {
+                    let mut c = cube
+                        .1
+                        .iter()
+                        .map(|e| e.e as u16)
+                        .enumerate()
+                        .filter(|(_, e)| *e >= 8)
+                        .map(|(i, _)| i)
+                        .collect::<Vec<usize>>();
+                    c.sort();
+                    c
+                },
+                {
+                    let mut c = cube::CubieLevel::from(ep)
+                        .1
+                        .iter()
+                        .map(|e| e.e as u16)
+                        .enumerate()
+                        .filter(|(_, e)| *e >= 8)
+                        .map(|(i, _)| i)
+                        .collect::<Vec<usize>>();
+                    c.sort();
+                    c
+                },
+            );
+        }
     }
 }
 
-impl Mul<UDSlice> for Move {
-    type Output = UDSlice;
-    fn mul(self, rhs: UDSlice) -> Self::Output {
+impl Mul<S> for Move {
+    type Output = S;
+    fn mul(self, rhs: S) -> Self::Output {
         lazy_static! {
-            static ref MEMO: Vec<UDSlice> = {
-                let mut memo = vec![UDSlice(!0); UDSLICE_COUNT * MOVE_COUNT];
-                for uds in UDSlice::iter() {
+            static ref MEMO: Vec<S> = {
+                let mut memo = vec![S(!0); COUNT * MOVE_COUNT];
+                for uds in S::iter() {
                     let cube: cube::CubieLevel = uds.into();
                     for m in Move::iter() {
-                        let v: UDSlice = (m * cube).into();
+                        let v: S = (m * cube).into();
                         memo[uds.0 as usize * MOVE_COUNT + (m as usize)] = v;
                     }
                 }
@@ -116,18 +133,17 @@ impl Mul<UDSlice> for Move {
         MEMO[rhs.0 as usize * MOVE_COUNT + self as usize]
     }
 }
-
-impl Mul<UDSlice> for Sym16 {
-    type Output = UDSlice;
-    fn mul(self, rhs: UDSlice) -> Self::Output {
+impl Mul<S> for Sym16 {
+    type Output = S;
+    fn mul(self, rhs: S) -> Self::Output {
         lazy_static! {
-            static ref MEMO: Vec<UDSlice> = {
-                let mut memo = vec![UDSlice(!0); UDSLICE_COUNT * SYM16_COUNT];
-                for uds in UDSlice::iter() {
-                    let cube: cube::CubieLevel = uds.into();
+            static ref MEMO: Vec<S> = {
+                let mut memo = vec![S(!0); COUNT * SYM16_COUNT];
+                for x in S::iter() {
+                    let cube: cube::CubieLevel = x.into();
                     for s in Sym16::iter() {
-                        let v: UDSlice = (s * cube).into();
-                        memo[uds.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
+                        let v: S = (s * cube).into();
+                        memo[x.0 as usize * SYM16_COUNT + (s.0 as usize)] = v;
                     }
                 }
                 memo
@@ -137,22 +153,26 @@ impl Mul<UDSlice> for Sym16 {
     }
 }
 
-impl std::iter::Iterator for UDSliceIterator {
-    type Item = UDSlice;
+#[derive(Debug, Copy, Clone)]
+pub struct Iter(u16);
+impl S {
+    pub const fn iter() -> Iter {
+        Iter(0)
+    }
+}
+impl std::iter::Iterator for Iter {
+    type Item = S;
     fn next(&mut self) -> Option<Self::Item> {
         let i = self.0;
         self.0 += 1;
-        if (i as usize) < UDSLICE_COUNT {
-            return Some(UDSlice(i));
+        if (i as usize) < COUNT {
+            return Some(S(i));
         }
         None
     }
     fn size_hint(&self) -> (usize, Option<usize>) {
-        (
-            UDSLICE_COUNT - self.0 as usize,
-            Some(UDSLICE_COUNT - self.0 as usize),
-        )
+        (COUNT - self.0 as usize, Some(COUNT - self.0 as usize))
     }
 }
-impl std::iter::FusedIterator for UDSliceIterator {}
-impl std::iter::ExactSizeIterator for UDSliceIterator {}
+impl std::iter::FusedIterator for Iter {}
+impl std::iter::ExactSizeIterator for Iter {}
