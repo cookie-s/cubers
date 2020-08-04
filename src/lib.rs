@@ -1,5 +1,3 @@
-#![feature(type_alias_enum_variants)]
-
 extern crate bincode;
 
 extern crate serde;
