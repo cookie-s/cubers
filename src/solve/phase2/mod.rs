@@ -18,12 +18,9 @@ pub mod p2move;
 use self::p2move::*;
 
 use crate::cube;
-use crate::solve::util::VecU2;
 use cube::Sym16;
 
-use std::convert::TryInto;
 use std::ops::Mul;
-use strum::IntoEnumIterator;
 
 pub const MAX_STEPS: usize = 18;
 
@@ -228,6 +225,8 @@ impl From<Phase2Coord> for PruneCoord {
 #[test]
 fn rotate_test() {
     use super::*;
+    use std::convert::TryInto;
+    use strum::IntoEnumIterator;
 
     let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
     let solved: Phase2Coord = solved.into();
