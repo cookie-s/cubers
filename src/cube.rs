@@ -74,6 +74,7 @@ pub struct CubieLevel(pub [CornerCube; 8], pub [EdgeCube; 12]);
 impl<'a> Mul<&'a CubieLevel> for &'a CubieLevel {
     type Output = CubieLevel;
 
+    #[allow(clippy::suspicious_arithmetic_impl)]
     fn mul(self, rhs: Self) -> Self::Output {
         let lhs = self;
 
@@ -99,6 +100,7 @@ impl Mul<CubieLevel> for Move {
     type Output = CubieLevel;
 
     fn mul(self, rhs: CubieLevel) -> Self::Output {
+        #[allow(clippy::suspicious_arithmetic_impl)]
         fn subst(m: Move) -> &'static CubieLevel {
             use self::CornerCubePos::*;
             use self::EdgeCubePos::*;
