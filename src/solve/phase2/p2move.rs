@@ -3,7 +3,7 @@ use cube::{Move, Sym16};
 use std::ops::Mul;
 
 #[derive(Debug, Copy, Clone, EnumCount, EnumIter, FromPrimitive, ToPrimitive)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub enum P2Move {
     U1, U2, U3,
     D1, D2, D3,

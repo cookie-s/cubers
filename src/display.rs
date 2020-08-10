@@ -9,7 +9,7 @@ pub struct RubikCube(pub super::cube::CubieLevel);
 impl fmt::Debug for RubikCube {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         #[derive(Clone,Copy)]
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         enum Color { B, W, R, Y, O, G };
         impl fmt::Display for Color {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

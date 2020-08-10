@@ -5,7 +5,7 @@ use strum::IntoEnumIterator;
 use CornerCube as CC;
 use EdgeCube as EC;
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub const SOLVED: CubieLevel = CubieLevel(
     [
         CC { c: CornerCubePos::URF, o: 0 },
@@ -33,13 +33,13 @@ pub const SOLVED: CubieLevel = CubieLevel(
     ],
 );
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CornerCubePos {
     URF, UFL, ULB, UBR, DFR, DLF, DBL, DRB,
 }
 
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum EdgeCubePos {
     UR, UF, UL, UB, DR, DF, DL, DB, FR, FL, BL, BR,
@@ -58,7 +58,7 @@ pub struct EdgeCube {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 pub enum Move {
     U1, U2, U3,
     D1, D2, D3,
@@ -338,15 +338,15 @@ mod tests {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter, FromPrimitive)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 enum SymF { F0, F1 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter, FromPrimitive)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 enum SymU { U0, U1, U2, U3 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, EnumCount, EnumIter, FromPrimitive)]
-#[cfg_attr(rustfmt, rustfmt_skip)]
+#[rustfmt::skip]
 enum SymLR { LR0, LR1 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]

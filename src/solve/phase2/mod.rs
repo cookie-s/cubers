@@ -181,7 +181,7 @@ impl From<Phase2Vec> for PruneVec {
         let s = Sym16::from(src.cp);
 
         PruneVec {
-            coset: coset,
+            coset,
             ep: s * src.ep,
         }
     }

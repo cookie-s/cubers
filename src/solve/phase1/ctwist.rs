@@ -20,7 +20,7 @@ impl From<S> for cube::CubieLevel {
     // return a representation
     fn from(tw: S) -> Self {
         let mut res = cube::SOLVED;
-        let (sum, _) = (0..7).into_iter().rev().fold((0, tw.0), |(sum, s), i| {
+        let (sum, _) = (0..7).rev().fold((0, tw.0), |(sum, s), i| {
             res.0[i].o = (s % 3) as u8;
             (sum + (s % 3) as u8, s / 3)
         });

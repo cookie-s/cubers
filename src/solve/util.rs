@@ -35,7 +35,7 @@ impl FisherShuffle {
     }
 
     pub fn num_to_array(&self, num: usize) -> Vec<usize> {
-        let mut num: usize = num.into();
+        let mut num: usize = num;
 
         let mut memo = Vec::with_capacity(self.size);
         for i in 0..self.size {
@@ -85,7 +85,7 @@ impl FisherShuffle8 {
     }
 
     pub fn num_to_array(&self, num: usize) -> Vec<usize> {
-        let mut num: usize = num.into();
+        let mut num: usize = num;
 
         let mut memo = Vec::with_capacity(8);
         for i in 0..8 {

@@ -8,8 +8,8 @@ pub struct TeeReader<R: Read, W: Write> {
 impl<R: Read, W: Write> TeeReader<R, W> {
     pub fn new(reader: R, writer: W) -> Self {
         TeeReader {
-            reader: reader,
-            writer: writer,
+            reader,
+            writer,
         }
     }
 }
