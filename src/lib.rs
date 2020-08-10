@@ -16,9 +16,6 @@ extern crate strum_macros;
 #[macro_use]
 extern crate num_derive;
 
-#[macro_use]
-extern crate hex_literal;
-
 pub mod cube;
 mod display;
 pub mod solve;

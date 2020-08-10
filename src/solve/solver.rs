@@ -224,16 +224,17 @@ impl Phase2Solver {
     where
         R: std::io::Read,
     {
-        use crate::hash::{Digest, DigestWriter, Sha256};
+        use crate::hash::{Digest, DigestWriter};
         use crate::tee::TeeReader;
+        use std::hash::Hasher;
 
-        let mut hasher = Sha256::new();
+        let mut hasher = Digest::new(0xEDB88320);
         let hashwriter = DigestWriter::new(&mut hasher);
         let reader = TeeReader::new(src, hashwriter);
         let result = bincode::deserialize_from(reader).or(Err(()))?;
-        let hash = hasher.finalize();
-        if hash[..] == hex!("562673e1f32373e41d653ec89967d5367924388812ca5f9a3245e2ec9be4f02c")[..]
-        {
+        let hash = hasher.finish();
+        // SHA256 hex!("562673e1f32373e41d653ec89967d5367924388812ca5f9a3245e2ec9be4f02c")
+        if hash == 0x39e61d6c {
             return Ok(result);
         }
         Err(())
