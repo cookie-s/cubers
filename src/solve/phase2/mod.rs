@@ -19,91 +19,13 @@ use self::p2move::*;
 
 use crate::cube;
 use crate::solve::util::VecU2;
-use cube::{Move, Sym16};
+use cube::Sym16;
 
-use num_traits::cast::FromPrimitive;
 use std::convert::TryInto;
 use std::ops::Mul;
 use strum::IntoEnumIterator;
 
-#[derive(Deserialize, Serialize)]
-pub struct Phase2 {
-    prunetable: VecU2, // CPERMCOSET_COUNT * EPERM_COUNT
-}
-
 pub const MAX_STEPS: usize = 18;
-
-impl Phase2 {
-    pub fn new_from_cache<R>(src: R) -> Result<Self, ()>
-    where
-        R: std::io::Read,
-    {
-        use crate::hash::{Digest, DigestWriter, Sha256};
-        use crate::tee::TeeReader;
-
-        let mut hasher = Sha256::new();
-        let hashwriter = DigestWriter::new(&mut hasher);
-        let reader = TeeReader::new(src, hashwriter);
-        let result = bincode::deserialize_from(reader).or(Err(()))?;
-        let hash = hasher.finalize();
-        if hash[..] == hex!("562673e1f32373e41d653ec89967d5367924388812ca5f9a3245e2ec9be4f02c")[..]
-        {
-            return Ok(result);
-        }
-        Err(())
-    }
-
-    pub fn new() -> Self {
-        let mut rawtable = vec![!0u8; CPERMCOSET_COUNT * EPERM_COUNT];
-        {
-            let mut queue = std::collections::VecDeque::with_capacity(37144996);
-
-            let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-            let solved: Phase2Coord = solved.into();
-            let solved: PruneCoord = solved.into();
-
-            queue.push_back(solved);
-            rawtable[solved.coord()] = 0;
-
-            while let Some(pc) = queue.pop_front() {
-                let dis = rawtable[pc.coord()];
-                if dis >= MAX_STEPS as u8 {
-                    break;
-                }
-
-                let cur: Phase2Vec = PruneVec::from(pc).into();
-
-                for s in Sym16::iter() {
-                    let cur = s * cur;
-
-                    for m in P2Move::iter() {
-                        let cur = m * cur;
-
-                        let t: PruneCoord = PruneVec::from(cur).into();
-                        let coord = t.coord();
-
-                        if rawtable[coord] == !0 {
-                            rawtable[coord] = dis + 1;
-                            queue.push_back(t);
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut p2 = Phase2 {
-            prunetable: VecU2::new(3, CPERMCOSET_COUNT * EPERM_COUNT),
-        };
-
-        for (i, &v) in rawtable.iter().enumerate() {
-            if v != !0 {
-                p2.prunetable.set(i, v as u8 % 3);
-            }
-        }
-
-        p2
-    }
-}
 
 #[derive(Clone)]
 pub struct Phase2Cube(cube::CubieLevel);
@@ -124,122 +46,6 @@ impl std::convert::TryFrom<cube::CubieLevel> for Phase2Cube {
             return Err(());
         }
         Ok(Phase2Cube(src))
-    }
-}
-
-impl Phase2Cube {
-    fn cur_lowerbound(p2: &Phase2, src: Phase2Coord) -> u8 {
-        use std::collections::{BinaryHeap, HashSet};
-
-        let src: PruneCoord = src.into();
-
-        let mut set = HashSet::new();
-        let mut heap = BinaryHeap::new();
-        heap.push((-0i8, src));
-        set.insert(src);
-
-        let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-        let solved: Phase2Coord = solved.into();
-        let goalpc = PruneCoord::from(solved);
-
-        while let Some((dist, pc)) = heap.pop() {
-            let dist = -dist;
-            if pc == goalpc {
-                return dist as u8;
-            }
-
-            let cur: Phase2Vec = PruneVec::from(pc).into();
-            let dec = (p2.prunetable.get(pc.coord()) + 2) % 3;
-
-            for s in Sym16::iter() {
-                let cur = s * cur;
-
-                for m in P2Move::iter() {
-                    let cur = m * cur;
-
-                    let npc: PruneCoord = PruneVec::from(cur).into();
-
-                    if set.contains(&npc) {
-                        continue;
-                    }
-
-                    if p2.prunetable.get(npc.coord()) == dec {
-                        heap.push((-(dist + 1), npc));
-                        set.insert(npc);
-                    }
-                }
-            }
-        }
-        unreachable!("broken prunetable")
-    }
-
-    fn solve(&self, p2: &Phase2) -> Vec<Move> {
-        use std::collections::{BinaryHeap, HashSet};
-
-        fn recover_rotates(dist: usize, rotates: u64) -> Vec<Move> {
-            let mut rotates = rotates;
-            let mut res = vec![Move::U1; dist];
-
-            for i in 0..dist {
-                let p2move = P2Move::from_usize(rotates as usize % P2MOVE_COUNT).unwrap();
-                res[dist - 1 - i] = p2move.into();
-                rotates /= P2MOVE_COUNT as u64;
-            }
-            res
-        }
-
-        let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-        let solved: Phase2Coord = solved.into();
-
-        let src: Phase2Coord = self.clone().into();
-
-        let lb = Self::cur_lowerbound(p2, src);
-        println!("lb: {}", lb);
-
-        let mut heap = BinaryHeap::new();
-        let mut set = HashSet::new();
-
-        heap.push((-0i8, src, lb, 0));
-        set.insert(src);
-
-        while let Some((dist, state, lb, rotates)) = heap.pop() {
-            let dist = -dist;
-            let dist = dist as u8;
-
-            if state == solved {
-                println!("dist: {}", dist);
-                return recover_rotates(dist as usize, rotates);
-            }
-
-            for m in P2Move::iter() {
-                let nstate = m * state;
-
-                let nlb = match p2.prunetable.get(PruneCoord::from(nstate).coord()) {
-                    i if i == lb % 3 => lb,
-                    i if i == (lb + 1) % 3 => lb + 1,
-                    i if i == (lb + 2) % 3 => lb - 1,
-                    _ => unreachable!(),
-                };
-
-                if dist + 1 + nlb >= MAX_STEPS as u8 {
-                    continue;
-                }
-
-                if set.contains(&nstate) {
-                    continue;
-                }
-                set.insert(nstate);
-
-                heap.push((
-                    -(dist as i8 + 1),
-                    nstate,
-                    nlb,
-                    rotates * P2MOVE_COUNT as u64 + m as u64,
-                ));
-            }
-        }
-
-        unreachable!();
     }
 }
 
@@ -441,15 +247,4 @@ fn rotate_test() {
     let cube: Phase2Coord = cube.into();
     let cube = L2 * (U3 * (F2 * cube));
     assert_eq!(cube, solved);
-}
-
-impl super::Phase for Phase2 {
-    type Error = ();
-
-    fn solve(&self, src: &crate::RubikCube) -> Result<Vec<Move>, Self::Error> {
-        let src = (*src).0;
-        let src: Phase2Cube = src.try_into()?;
-
-        Ok(src.solve(&self))
-    }
 }

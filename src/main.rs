@@ -1,5 +1,5 @@
 use cubers::cube;
-use cubers::solve::Phase;
+use cubers::solve;
 
 fn main() {
     println!("Hello, world!");
@@ -20,16 +20,17 @@ fn main() {
     let c = cubers::RubikCube(cl);
     println!("{:?}", c);
 
+    use solve::solver::Solver;
     let p2 = std::fs::File::open("phase2.db")
-        .map(|file| cubers::solve::phase2::Phase2::new_from_cache(file).unwrap())
+        .map(|file| solve::solver::Phase2Solver::new_from_cache(file).unwrap())
         .unwrap_or_else(|_| {
-            let res = cubers::solve::phase2::Phase2::new();
+            let res = solve::solver::Phase2Solver::new();
             let file = std::io::BufWriter::new(std::fs::File::create("phase2.db").unwrap());
             let _ = bincode::serialize_into(file, &res);
             res
         });
 
-    let solve = p2.solve(&c);
+    let solve = p2.solve(c.0);
     println!("{:?}", solve);
 
     if let Ok(moves) = solve {
