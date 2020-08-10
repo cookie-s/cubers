@@ -132,14 +132,9 @@ pub struct PruneVec {
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PruneCoord(u32);
 
-impl PruneCoord {
-    fn coord(&self) -> usize {
-        self.0 as usize
-    }
-}
 impl From<PruneCoord> for usize {
     fn from(src: PruneCoord) -> usize {
-        src.coord()
+        src.0 as usize
     }
 }
 

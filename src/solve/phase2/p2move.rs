@@ -47,7 +47,7 @@ impl From<P2Move> for Move {
     }
 }
 
-impl std::ops::Mul<cube::CubieLevel> for P2Move {
+impl Mul<cube::CubieLevel> for P2Move {
     type Output = cube::CubieLevel;
     fn mul(self, rhs: cube::CubieLevel) -> Self::Output {
         let m: Move = self.into();
