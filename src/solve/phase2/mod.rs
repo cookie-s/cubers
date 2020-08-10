@@ -2,14 +2,19 @@ mod cperm;
 mod eperm;
 mod udslice;
 
-use self::cperm::{CPerm, COUNT as CPERM_COUNT};
-use self::eperm::{EPerm, COUNT as EPERM_COUNT};
-use self::udslice::{UDSlice, COUNT as UDSLICE_COUNT};
+use self::cperm::CPerm;
+use self::eperm::EPerm;
+use self::udslice::UDSlice;
 
 mod cpermcoset;
 use self::cpermcoset::*;
 
-mod p2move;
+pub use self::cperm::COUNT as CPERM_COUNT;
+pub use self::cpermcoset::CPERMCOSET_COUNT;
+pub use self::eperm::COUNT as EPERM_COUNT;
+pub use self::udslice::COUNT as UDSLICE_COUNT;
+
+pub mod p2move;
 use self::p2move::*;
 
 use crate::cube;
@@ -84,15 +89,6 @@ impl Phase2 {
                     }
                 }
             }
-
-            let mut t = [0; MAX_STEPS + 1];
-            for &v in rawtable.iter() {
-                if v == !0 {
-                    continue;
-                }
-                t[v as usize] += 1;
-            }
-            println!("{:?}", t);
         }
 
         let mut p2 = Phase2 {
@@ -110,7 +106,7 @@ impl Phase2 {
 }
 
 #[derive(Clone)]
-struct Phase2Cube(cube::CubieLevel);
+pub struct Phase2Cube(cube::CubieLevel);
 
 impl std::convert::TryFrom<cube::CubieLevel> for Phase2Cube {
     type Error = ();
@@ -132,6 +128,51 @@ impl std::convert::TryFrom<cube::CubieLevel> for Phase2Cube {
 }
 
 impl Phase2Cube {
+    fn cur_lowerbound(p2: &Phase2, src: Phase2Coord) -> u8 {
+        use std::collections::{BinaryHeap, HashSet};
+
+        let src: PruneCoord = src.into();
+
+        let mut set = HashSet::new();
+        let mut heap = BinaryHeap::new();
+        heap.push((-0i8, src));
+        set.insert(src);
+
+        let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
+        let solved: Phase2Coord = solved.into();
+        let goalpc = PruneCoord::from(solved);
+
+        while let Some((dist, pc)) = heap.pop() {
+            let dist = -dist;
+            if pc == goalpc {
+                return dist as u8;
+            }
+
+            let cur: Phase2Vec = PruneVec::from(pc).into();
+            let dec = (p2.prunetable.get(pc.coord()) + 2) % 3;
+
+            for s in Sym16::iter() {
+                let cur = s * cur;
+
+                for m in P2Move::iter() {
+                    let cur = m * cur;
+
+                    let npc: PruneCoord = PruneVec::from(cur).into();
+
+                    if set.contains(&npc) {
+                        continue;
+                    }
+
+                    if p2.prunetable.get(npc.coord()) == dec {
+                        heap.push((-(dist + 1), npc));
+                        set.insert(npc);
+                    }
+                }
+            }
+        }
+        unreachable!("broken prunetable")
+    }
+
     fn solve(&self, p2: &Phase2) -> Vec<Move> {
         use std::collections::{BinaryHeap, HashSet};
 
@@ -152,50 +193,7 @@ impl Phase2Cube {
 
         let src: Phase2Coord = self.clone().into();
 
-        fn cur_lowerbound(p2: &Phase2, src: Phase2Coord) -> u8 {
-            let src: PruneCoord = src.into();
-
-            let mut set = HashSet::new();
-            let mut heap = BinaryHeap::new();
-            heap.push((-0i8, src));
-            set.insert(src);
-
-            let solved: Phase2Cube = cube::SOLVED.try_into().unwrap();
-            let solved: Phase2Coord = solved.into();
-            let goalpc = PruneCoord::from(solved);
-
-            loop {
-                let (dist, pc) = heap.pop().unwrap();
-                let dist = -dist;
-                if pc == goalpc {
-                    return dist as u8;
-                }
-
-                let cur: Phase2Vec = PruneVec::from(pc).into();
-                let dec = (p2.prunetable.get(pc.coord()) + 2) % 3;
-
-                for s in Sym16::iter() {
-                    let cur = s * cur;
-
-                    for m in P2Move::iter() {
-                        let cur = m * cur;
-
-                        let npc: PruneCoord = PruneVec::from(cur).into();
-
-                        if set.contains(&npc) {
-                            continue;
-                        }
-
-                        if p2.prunetable.get(npc.coord()) == dec {
-                            heap.push((-(dist + 1), npc));
-                            set.insert(npc);
-                        }
-                    }
-                }
-            }
-        }
-
-        let lb = cur_lowerbound(p2, src);
+        let lb = Self::cur_lowerbound(p2, src);
         println!("lb: {}", lb);
 
         let mut heap = BinaryHeap::new();
@@ -246,13 +244,13 @@ impl Phase2Cube {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct Phase2Vec {
+pub struct Phase2Vec {
     cp: CPerm,
     ep: EPerm,
     uds: UDSlice,
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct Phase2Coord(u32, u16);
+pub struct Phase2Coord(u32, u16);
 
 impl From<Phase2Coord> for Phase2Vec {
     fn from(src: Phase2Coord) -> Self {
@@ -324,16 +322,21 @@ impl Mul<Phase2Coord> for Sym16 {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-struct PruneVec {
+pub struct PruneVec {
     coset: CPermCoset,
     ep: EPerm,
 }
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct PruneCoord(u32);
+pub struct PruneCoord(u32);
 
 impl PruneCoord {
     fn coord(&self) -> usize {
         self.0 as usize
+    }
+}
+impl From<PruneCoord> for usize {
+    fn from(src: PruneCoord) -> usize {
+        src.coord()
     }
 }
 

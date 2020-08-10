@@ -1,3 +1,4 @@
+#![feature(test)]
 extern crate bincode;
 
 extern crate serde;
@@ -25,3 +26,7 @@ pub use display::RubikCube;
 
 mod hash;
 mod tee;
+
+extern crate test;
+#[cfg(test)]
+mod bench;
