@@ -1,21 +1,21 @@
 mod cperm;
+mod cpermcoset;
 mod eperm;
 mod udslice;
 
+pub mod p2move;
+
 use self::cperm::CPerm;
+use self::cpermcoset::CPermCoset;
 use self::eperm::EPerm;
 use self::udslice::UDSlice;
-
-mod cpermcoset;
-use self::cpermcoset::*;
 
 pub use self::cperm::COUNT as CPERM_COUNT;
 pub use self::cpermcoset::CPERMCOSET_COUNT;
 pub use self::eperm::COUNT as EPERM_COUNT;
 pub use self::udslice::COUNT as UDSLICE_COUNT;
 
-pub mod p2move;
-use self::p2move::*;
+use self::p2move::P2Move;
 
 use crate::cube;
 use cube::Sym16;
