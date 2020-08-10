@@ -31,7 +31,7 @@ impl From<S> for cube::CubieLevel {
         let array = shuffle.num_to_array(uds.0 as usize);
         let mut res = cube::SOLVED;
         for i in 0..4 {
-            res.1[i as usize + 8].e = cube::SOLVED.1[array[i] + 8].e;
+            res.1[i + 8].e = cube::SOLVED.1[array[i] + 8].e;
         }
         res
     }

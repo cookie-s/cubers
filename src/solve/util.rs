@@ -60,13 +60,13 @@ impl FisherShuffle8 {
 
     pub fn array_to_num<T: Copy + Into<usize>>(&self, array: &[T]) -> usize {
         let mut memo = [0; 8];
-        for i in 0..8 {
-            memo[i] = i;
+        for (i, it) in memo.iter_mut().enumerate() {
+            *it = i;
         }
 
         let mut pos = [0; 8];
-        for i in 0..8 {
-            pos[i] = i;
+        for (i, it) in pos.iter_mut().enumerate() {
+            *it = i;
         }
 
         let mut res = 0;
